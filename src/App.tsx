@@ -18,6 +18,7 @@ import { UserPreferences, PantryIngredient, RecipeResult } from "./types";
 // Inner Components
 import HydrationTracker from "./components/HydrationTracker";
 import SymptomTracker from "./components/SymptomTracker";
+import WeightTracker from "./components/WeightTracker";
 import MounjaroMonitor from "./components/MounjaroMonitor";
 import PantryScanner from "./components/PantryScanner";
 import MealPlanner from "./components/MealPlanner";
@@ -143,7 +144,7 @@ export default function App() {
             <Heart className="w-5 h-5 fill-white" />
           </div>
           <div>
-            <h1 className="text-base font-extrabold tracking-tight text-stone-800 font-heading leading-none">NutriAI</h1>
+            <h1 className="text-base font-extrabold tracking-tight text-stone-800 font-heading leading-none">PersonalDiet</h1>
             <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">Suporte Clínico Avançado</span>
           </div>
         </div>
@@ -303,6 +304,12 @@ export default function App() {
             {/* Feature 2: Nausea and clinical symptoms */}
             <SymptomTracker />
 
+            {/* Feature 6: Weight and BMI Tracker */}
+            <WeightTracker 
+              clinicalTreatment={preferences.clinicalTreatment} 
+              dietType={preferences.dietType} 
+            />
+
             {/* Feature 4: Ozempic/Mounjaro injection monitor with visual Body Map */}
             <MounjaroMonitor treatmentType={preferences.clinicalTreatment} />
 
@@ -341,7 +348,7 @@ export default function App() {
 
       {/* Footer credits and standalone app standalone indicators */}
       <footer className="text-center py-6 mt-12 text-[10px] text-stone-400 font-bold border-t border-stone-100 flex flex-col items-center gap-1.5 max-w-sm mx-auto p-4 leading-normal">
-        <div>NutriAI — Protocolo de Inteligência Clínica Nutricional</div>
+        <div>PersonalDiet — Protocolo de Inteligência Clínica Nutricional</div>
         <div className="bg-stone-100 px-2 py-0.5 rounded text-stone-500 border border-stone-200/40">v2.1.0-pwa (Estabilidade Total)</div>
       </footer>
 

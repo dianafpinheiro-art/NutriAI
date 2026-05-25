@@ -1,6 +1,6 @@
 {
-  "name": "NutriAI - Cardápios Clínicos",
-  "short_name": "NutriAI",
+  "name": "PersonalDiet - Cardápios Clínicos",
+  "short_name": "PersonalDiet",
   "description": "Elaboração de cardápio semanal personalizado, listas de compras precisas e monitoramento clínico.",
   "start_url": "/",
   "display": "standalone",

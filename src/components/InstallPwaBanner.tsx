@@ -51,7 +51,7 @@ export default function InstallPwaBanner() {
           <Download className="w-5 h-5" />
         </div>
         <div>
-          <h4 className="font-heading font-bold text-sm text-gray-900 leading-tight">Instalar NutriAI?</h4>
+          <h4 className="font-heading font-bold text-sm text-gray-900 leading-tight">Instalar PersonalDiet?</h4>
           <p className="font-body text-xs text-text-gray-500 mt-0.5">Acesse instantaneamente da tela inicial em modo offline!</p>
         </div>
       </div>

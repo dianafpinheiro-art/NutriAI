@@ -29,7 +29,7 @@ function getGeminiClient(): GoogleGenAI {
   return aiClient;
 }
 
-// REST endpoints for NutriAI
+// REST endpoints for PersonalDiet
 app.get("/api/health", (req: Request, res: Response) => {
   res.json({
     status: "ok",
@@ -321,7 +321,7 @@ Inclua as quantidades exatas para montagem de lista de compras posterior.`;
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
-        systemInstruction: "Você é o NutriAI, o assistente inteligente de cardápios clínicos e esportivos. Elabore receitas e cardápios precisos que repeitem com precisão absoluta as exclusões de ingredientes do usuário, restrições clínicas (Ex: Cíacos proíbem glúten estritamente; Intolerância a lactose proíbe laticínios tradicionais; Ozempic/Mounjaro exigem porções leves, sem gordura saturada ou excesso de açúcar).",
+        systemInstruction: "Você é o PersonalDiet, o assistente inteligente de cardápios clínicos e esportivos. Elabore receitas e cardápios precisos que repeitem com precisão absoluta as exclusões de ingredientes do usuário, restrições clínicas (Ex: Cíacos proíbem glúten estritamente; Intolerância a lactose proíbe laticínios tradicionais; Ozempic/Mounjaro exigem porções leves, sem gordura saturada ou excesso de açúcar).",
       },
     });
 
@@ -541,9 +541,15 @@ async function startServer() {
     console.log("Serving static production assets from dist.");
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Express custom server running on http://localhost:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Express custom server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
