@@ -1,4 +1,4 @@
-const CACHE_NAME = "nutriai-cache-v1";
+const CACHE_NAME = "nutriai-cache-v2";
 const ASSETS = [
   "/",
   "/index.html",
@@ -39,9 +39,8 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
 
   // Cache storage ONLY supports GET and HEAD requests. Non-GET requests (like POST)
-  // must be forwarded directly without attempting to read or store them in Cache.
+  // are NOT handled by the Service Worker. Let the browser handle them naturally on the network.
   if (e.request.method !== "GET" && e.request.method !== "HEAD") {
-    e.respondWith(fetch(e.request));
     return;
   }
 
