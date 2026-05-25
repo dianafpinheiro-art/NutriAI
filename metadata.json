@@ -1,0 +1,10 @@
+{
+  "name": "NutriAI",
+  "description": "Elaboração de cardápio semanal personalizado, listas de compras precisas e monitoramento clínico (Mounjaro/Ozempic, náuseas, hidratação e scanner de alimentos).",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
