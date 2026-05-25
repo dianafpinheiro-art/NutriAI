@@ -38,16 +38,25 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
 
+  // Cache storage ONLY supports GET and HEAD requests. Non-GET requests (like POST)
+  // must be forwarded directly without attempting to read or store them in Cache.
+  if (e.request.method !== "GET" && e.request.method !== "HEAD") {
+    e.respondWith(fetch(e.request));
+    return;
+  }
+
   // For API endpoints, use Network-First
   if (url.pathname.startsWith("/api/")) {
     e.respondWith(
       fetch(e.request)
         .then((res) => {
-          // Cache successful responses
-          const resClone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(e.request, resClone);
-          });
+          // Cache successful standard GET api responses
+          if (res.status === 200) {
+            const resClone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(e.request, resClone);
+            });
+          }
           return res;
         })
         .catch(() => {
@@ -70,9 +79,10 @@ self.addEventListener("fetch", (e) => {
           // Fetch background update
           fetch(e.request).then((networkRes) => {
             if (networkRes.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, networkRes));
+              const resClone = networkRes.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
             }
-          });
+          }).catch((err) => console.log("Background fetch failed:", err));
           return cachedRes;
         }
         return fetch(e.request);
