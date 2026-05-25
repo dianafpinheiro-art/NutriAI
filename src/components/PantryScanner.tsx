@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from "react";
-import { Search, Plus, Trash2, Camera, FileText, AlertTriangle, ShieldCheck, CheckCircle2, RefreshCw, Upload, Sparkles } from "lucide-react";
+import { Search, Plus, Trash2, Camera, FileText, AlertTriangle, ShieldCheck, CheckCircle2, RefreshCw, Upload, Sparkles, Check, Heart, X, CheckSquare, Square, Eye, Edit2 } from "lucide-react";
 import { PantryIngredient, ClinicalRestriction } from "../types";
 
 interface PantryScannerProps {
@@ -17,10 +17,14 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
   const [manQty, setManQty] = useState("");
   const [manCategory, setManCategory] = useState("Proteínas");
 
-  // Vision Simulator
-  const [visionImage, setVisionImage] = useState<string | null>(null);
+  // UPGRADED Vision Multi-Carousel State
+  // 3 slots of fridge, 3 slots of pantry
+  const [fridgePhotos, setFridgePhotos] = useState<(string | null)[]>([null, null, null]);
+  const [pantryPhotos, setPantryPhotos] = useState<(string | null)[]>([null, null, null]);
+  const [activePhotoCategory, setActivePhotoCategory] = useState<"fridge" | "pantry">("fridge");
+  
   const [isVisionScanning, setIsVisionScanning] = useState(false);
-  const [visionDetectedItems, setVisionDetectedItems] = useState<PantryIngredient[]>([]);
+  const [visionDetectedItems, setVisionDetectedItems] = useState<(PantryIngredient & { checked: boolean })[]>([]);
   
   // PDF Simulator
   const [pdfFile, setPdfFile] = useState<string | null>(null);
@@ -87,41 +91,119 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
     }
   };
 
-  // Computer Vision Simulation Trigger
-  const handleVisionSimulate = async () => {
+  // Preset unsplash simulation sources
+  const photoLibrary = {
+    fridge: [
+      "https://images.unsplash.com/photo-1571175452283-bc241517565e?w=400&q=80", // fruit jar shelves
+      "https://images.unsplash.com/photo-1590794056226-79ef3a8147e1?w=400&q=80", // crisper vegetables
+      "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80"  // glass prep bowls
+    ],
+    pantry: [
+      "https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=400&q=80", // grains/oils
+      "https://images.unsplash.com/photo-1588854337115-1c67d9247e4d?w=400&q=80", // avocados baskets
+      "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&q=80"  // oats/chocolate
+    ]
+  };
+
+  const handleAddPhotoSlot = (category: "fridge" | "pantry", slotIdx: number) => {
+    const samplePhoto = photoLibrary[category][slotIdx];
+    if (category === "fridge") {
+      const next = [...fridgePhotos];
+      next[slotIdx] = samplePhoto;
+      setFridgePhotos(next);
+    } else {
+      const next = [...pantryPhotos];
+      next[slotIdx] = samplePhoto;
+      setPantryPhotos(next);
+    }
+  };
+
+  const handleRemovePhotoSlot = (category: "fridge" | "pantry", slotIdx: number) => {
+    if (category === "fridge") {
+      const next = [...fridgePhotos];
+      next[slotIdx] = null;
+      setFridgePhotos(next);
+    } else {
+      const next = [...pantryPhotos];
+      next[slotIdx] = null;
+      setPantryPhotos(next);
+    }
+    setVisionDetectedItems([]);
+  };
+
+  // Vision Computer Multi-Image processing simulator
+  const handleScanPhotos = async () => {
+    // Count active photo files
+    const totalPhotos = [...fridgePhotos, ...pantryPhotos].filter(p => p !== null).length;
+    if (totalPhotos === 0) {
+      alert("Por favor adicione pelo menos uma foto de geladeira ou dispensa para iniciar análise!");
+      return;
+    }
+
     setIsVisionScanning(true);
-    setVisionImage("https://images.unsplash.com/photo-1571175452283-bc241517565e?w=500&auto=format&fit=crop");
     setVisionDetectedItems([]);
 
     try {
       const response = await fetch("/api/gemini/analyze-pantry-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: "mock-base64-data" }),
+        body: JSON.stringify({ image: "carousel-multi-base64-data", totalPhotos }),
       });
       const data = await response.json();
       
       if (data.detectedIngredients) {
-        const withIds = data.detectedIngredients.map((item: any) => ({
+        // Enforce checklist checkbox selection state (all verified true by default, editable in client UI)
+        const parsed = data.detectedIngredients.map((item: any) => ({
           ...item,
           id: Math.random().toString(36).substring(2, 9),
+          checked: true,
         }));
-        setVisionDetectedItems(withIds);
+        setVisionDetectedItems(parsed);
       }
     } catch (err) {
       console.error(err);
+      alert("Erro ao conectar à API de visao inteligente do Gemini.");
     } finally {
       setIsVisionScanning(false);
     }
   };
 
+  const handleToggleCheckItem = (id: string) => {
+    setVisionDetectedItems(
+      visionDetectedItems.map(item => item.id === id ? { ...item, checked: !item.checked } : item)
+    );
+  };
+
+  const handleEditDetectedItem = (id: string, field: "name" | "quantity", value: string) => {
+    setVisionDetectedItems(
+      visionDetectedItems.map(item => item.id === id ? { ...item, [field]: value } : item)
+    );
+  };
+
   const handleConfirmVisionItems = () => {
-    const updated = [...ingredients, ...visionDetectedItems];
+    const selected = visionDetectedItems.filter(item => item.checked);
+    if (selected.length === 0) {
+      alert("Selecione pelo menos um alimento no formulário de confirmação!");
+      return;
+    }
+
+    // Clean client identifiers and add
+    const mapped = selected.map(item => ({
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      category: item.category || "Despensa"
+    }));
+
+    const updated = [...ingredients, ...mapped];
     saveInventory(updated);
+    
+    // Clear vision scanner drawer after success
     setVisionDetectedItems([]);
-    setVisionImage(null);
+    setFridgePhotos([null, null, null]);
+    setPantryPhotos([null, null, null]);
     setActiveTab("inventory");
-    alert("Ingredientes detectados salvos com sucesso na Despensa!");
+    alert(`Sucesso! ${mapped.length} ingredientes confirmados e adicionados com segurança ao seu estoque.`);
   };
 
   // PDF Doctor Prescription Simulation Trigger
@@ -204,7 +286,7 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
             activeTab === "vision" ? "bg-pink-50 text-pink-500" : "text-stone-500 hover:text-stone-700"
           }`}
         >
-          Foto da Despensa (IA)
+          Fotos Despensa & Geladeira (IA)
         </button>
         <button
           onClick={() => setActiveTab("pdf")}
@@ -230,7 +312,7 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-heading font-extrabold text-stone-800 text-sm">O que você tem em casa?</h3>
-              <p className="text-[11px] text-stone-400">Insira ingredientes ou use Visão Computacional para completar</p>
+              <p className="text-[11px] text-stone-400">Insira ingredientes ou use as fotos com Inteligência Artificial para escanear</p>
             </div>
             {ingredients.length > 0 && (
               <button 
@@ -270,7 +352,7 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
             {ingredients.length === 0 ? (
               <div className="col-span-full text-center py-6 bg-stone-50 rounded-2xl">
                 <p className="text-xs text-stone-400 font-medium">Sua geladeira está vazia!</p>
-                <p className="text-[10px] text-stone-400">Adicione manualmente acima ou capture foto da despensa.</p>
+                <p className="text-[10px] text-stone-400">Adicione manualmente acima ou use a aba de Fotos Despensa/Geladeira.</p>
               </div>
             ) : (
               ingredients.map((item) => (
@@ -302,76 +384,155 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
         </div>
       )}
 
-      {/* Screen 2: Vision simulate */}
+      {/* Upgraded Screen 2: Multi-Vision Carousel */}
       {activeTab === "vision" && (
         <div className="flex flex-col gap-5">
           <div>
-            <h3 className="font-heading font-extrabold text-stone-800 text-sm">Escaneamento por Visão Computacional</h3>
-            <p className="text-[11px] text-stone-400">Capture ou faça upload de uma foto da sua despensa para detectar ingredientes instantaneamente</p>
+            <h3 className="font-heading font-extrabold text-stone-800 text-sm">Escaneamento por Fotos Clínico</h3>
+            <p className="text-[11px] text-stone-400">Suba até 3 fotos da Geladeira e 3 fotos da Despensa (Dispensa). O Gemini detectará todos os alimentos!</p>
           </div>
 
-          <div className="border border-dashed border-stone-200 bg-stone-50/40 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-4">
-            {visionImage ? (
-              <div className="relative w-44 h-44 rounded-2xl overflow-hidden border border-stone-200">
-                <img src={visionImage} alt="Geladeira" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/30 flex items-center justify-center text-white text-xs font-bold uppercase">
-                  ✓ Foto Enviada
+          {/* Category Toggle selector */}
+          <div className="flex gap-2 p-1 bg-stone-100 rounded-xl">
+            <button
+              onClick={() => setActivePhotoCategory("fridge")}
+              className={`flex-1 py-1.5 text-xs font-heading font-bold rounded-lg transition-all text-center ${
+                activePhotoCategory === "fridge" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500"
+              }`}
+            >
+              ❄️ Geladeira (Máx: 3)
+            </button>
+            <button
+              onClick={() => setActivePhotoCategory("pantry")}
+              className={`flex-1 py-1.5 text-xs font-heading font-bold rounded-lg transition-all text-center ${
+                activePhotoCategory === "pantry" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500"
+              }`}
+            >
+              📦 Despensa / Dispensa (Máx: 3)
+            </button>
+          </div>
+
+          {/* Images Grid Slots for selected category */}
+          <div className="grid grid-cols-3 gap-3">
+            {[0, 1, 2].map((idx) => {
+              const currentPhotos = activePhotoCategory === "fridge" ? fridgePhotos : pantryPhotos;
+              const photo = currentPhotos[idx];
+
+              return (
+                <div key={idx} className="relative aspect-square rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50 flex flex-col items-center justify-center text-center overflow-hidden hover:bg-stone-100/50 transition-colors">
+                  {photo ? (
+                    <>
+                      <img src={photo} alt="Slot da cozinha" className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => handleRemovePhotoSlot(activePhotoCategory, idx)}
+                        className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-md"
+                        title="Remover foto"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                      <div className="absolute bottom-0 inset-x-0 bg-stone-900/40 text-white text-[8px] py-0.5 font-bold uppercase truncate">
+                        Foto {idx + 1}
+                      </div>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => handleAddPhotoSlot(activePhotoCategory, idx)}
+                      className="w-full h-full flex flex-col items-center justify-center p-2 text-stone-400 hover:text-pink-500 transition-colors"
+                    >
+                      <Camera className="w-6 h-6 mb-1 text-stone-300" />
+                      <span className="text-[9px] font-bold uppercase leading-none">Simular</span>
+                      <span className="text-[8px] text-stone-400 mt-1">Slot {idx + 1}</span>
+                    </button>
+                  )}
                 </div>
-              </div>
-            ) : (
-              <Camera className="w-10 h-10 text-stone-300 animate-pulse" />
-            )}
-
-            {!visionImage && (
-              <div>
-                <button
-                  onClick={handleVisionSimulate}
-                  disabled={isVisionScanning}
-                  className="px-5 py-2.5 bg-pink-500 hover:bg-pink-600 text-white text-xs font-bold rounded-2xl flex items-center gap-1.5 shadow-md shadow-pink-100 btn-interactive"
-                >
-                  <Camera className="w-4 h-4" /> Simular Captura da Despensa
-                </button>
-                <span className="text-[10px] text-stone-400 block mt-2">Dica: Um feed simulador carregará os itens em poucos segundos</span>
-              </div>
-            )}
-
-            {isVisionScanning && (
-              <div className="flex items-center gap-2 text-xs text-stone-500">
-                <RefreshCw className="w-4 h-4 animate-spin text-pink-500" />
-                Processando imagem com Gemini Vision...
-              </div>
-            )}
+              );
+            })}
           </div>
 
-          {/* Confirm captured vision items */}
+          {/* Prompt action trigger */}
+          {visionDetectedItems.length === 0 && (
+            <button
+              onClick={handleScanPhotos}
+              disabled={isVisionScanning || [...fridgePhotos, ...pantryPhotos].filter(p => p !== null).length === 0}
+              className="w-full py-3 bg-pink-500 hover:bg-pink-600 text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow-md shadow-pink-100 btn-interactive disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isVisionScanning ? "animate-spin" : ""}`} />
+              {isVisionScanning ? "Processando imagens com Gemini..." : "Escanear Fotos Selecionadas (IA)"}
+            </button>
+          )}
+
+          {/* CONFIRMAÇÃO DA IDENTIFICAÇÃO TABLE DRAWER */}
           {visionDetectedItems.length > 0 && (
-            <div className="bg-white border border-pink-100 rounded-2xl p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between border-b border-pink-50 pb-2">
-                <h4 className="text-xs font-heading font-bold text-pink-500">Alimentos Identificados na Foto</h4>
-                <span className="text-[9px] bg-pink-50 text-pink-600 font-bold px-2 py-0.5 rounded-full">Confirmar Itens</span>
+            <div className="bg-gradient-to-tr from-pink-500/5 to-purple-500/5 border border-pink-100 rounded-2xl p-4 flex flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-pink-100/60 pb-2">
+                <div>
+                  <h4 className="text-xs font-heading font-extrabold text-pink-600">Confirmação da Identificação de Alimentos</h4>
+                  <p className="text-[9px] text-stone-400">Verifique, edite e selecione apenas o que quer salvar</p>
+                </div>
+                <span className="text-[9px] bg-pink-500 text-white font-bold px-2 py-0.5 rounded-full uppercase">IA Ativa</span>
               </div>
 
-              <div className="space-y-1 max-h-36 overflow-y-auto">
-                {visionDetectedItems.map((item, idx) => (
-                  <div key={item.id} className="flex justify-between items-center text-xs p-1.5 bg-stone-50 rounded-lg">
-                    <span className="font-bold text-stone-700">{item.name}</span>
-                    <span className="text-stone-400 font-semibold">{item.quantity}</span>
+              {/* Verified food items review list with inputs */}
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {visionDetectedItems.map((item) => (
+                  <div key={item.id} className="flex gap-2 items-center bg-white border border-stone-100 p-2 rounded-xl text-xs hover:border-pink-300 transition-all">
+                    
+                    {/* Checkbox */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleCheckItem(item.id)}
+                      className="p-1 rounded text-stone-400 transition-colors"
+                    >
+                      {item.checked ? (
+                        <CheckSquare className="w-4 h-4 text-pink-500" />
+                      ) : (
+                        <Square className="w-4 h-4 text-stone-300" />
+                      )}
+                    </button>
+
+                    {/* Edit fields directly in table cells */}
+                    <div className="flex-1 min-w-0 grid grid-cols-2 gap-1.5">
+                      <div>
+                        <span className="text-[8px] text-stone-400 uppercase font-semibold leading-none">Alimento</span>
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => handleEditDetectedItem(item.id, "name", e.target.value)}
+                          disabled={!item.checked}
+                          className="w-full text-xs font-bold leading-tight border-b border-dashed border-stone-200 outline-none text-stone-700 py-0.5 focus:border-pink-400"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[8px] text-stone-400 uppercase font-semibold leading-none">Quantidade</span>
+                        <input
+                          type="text"
+                          value={item.quantity}
+                          onChange={(e) => handleEditDetectedItem(item.id, "quantity", e.target.value)}
+                          disabled={!item.checked}
+                          className="w-full text-xs font-medium leading-tight border-b border-dashed border-stone-200 outline-none text-stone-400 py-0.5 focus:border-pink-400"
+                        />
+                      </div>
+                    </div>
+
                   </div>
                 ))}
               </div>
 
+              {/* Save or Cancel */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setVisionDetectedItems([]); setVisionImage(null); }}
-                  className="w-1/2 py-2 border border-stone-200 hover:bg-stone-50 text-stone-500 font-bold rounded-xl text-xs"
+                  type="button"
+                  onClick={() => { setVisionDetectedItems([]); setFridgePhotos([null, null, null]); setPantryPhotos([null, null, null]); }}
+                  className="w-1/3 py-2 border border-stone-200 hover:bg-stone-50 text-stone-500 font-bold rounded-xl text-xs"
                 >
                   Cancelar
                 </button>
                 <button
+                  type="button"
                   onClick={handleConfirmVisionItems}
-                  className="w-1/2 py-2 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl text-xs shadow-sm"
+                  className="w-2/3 py-2 bg-pink-500 hover:bg-pink-600 text-white font-extrabold rounded-xl text-xs shadow-sm flex items-center justify-center gap-1"
                 >
-                  Adicionar à Despensa
+                  Confirmar e Adicionar à Geladeira
                 </button>
               </div>
             </div>

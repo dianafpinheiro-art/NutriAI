@@ -11,7 +11,8 @@ import {
   Plus,
   Trash2,
   Syringe,
-  AlertCircle
+  AlertCircle,
+  User
 } from "lucide-react";
 import { UserPreferences, PantryIngredient, RecipeResult } from "./types";
 
@@ -23,9 +24,11 @@ import MounjaroMonitor from "./components/MounjaroMonitor";
 import PantryScanner from "./components/PantryScanner";
 import MealPlanner from "./components/MealPlanner";
 import InstallPwaBanner from "./components/InstallPwaBanner";
+import WhoAmI from "./components/WhoAmI";
 
 export default function App() {
   const [preferences, setPreferences] = useState<UserPreferences>({
+    userName: "",
     excludedIngredients: ["berinjela", "coentro"],
     clinicalRestrictions: ["lactose"],
     clinicalTreatment: "mounjaro",
@@ -36,6 +39,7 @@ export default function App() {
   const [pantry, setPantry] = useState<PantryIngredient[]>([]);
   const [externalRecipes, setExternalRecipes] = useState<RecipeResult[] | null>(null);
   const [showPreferencesEditor, setShowPreferencesEditor] = useState(false);
+  const [showWhoAmI, setShowWhoAmI] = useState(false);
 
   // Form input states for direct reactivity and validation
   const [newExcluded, setNewExcluded] = useState("");
@@ -60,6 +64,14 @@ export default function App() {
       }
     }
 
+    // Auto open WhoAmI onboarding on first visit
+    const onboarded = localStorage.getItem("nutri_onboarded");
+    if (onboarded !== "true") {
+      setTimeout(() => {
+        setShowWhoAmI(true);
+      }, 800);
+    }
+
     // TriggerSonner PWA interactive notification for update availability on second startup
     setTimeout(() => {
       toast("Nova versão disponível (v2.1.0-pwa)!", {
@@ -82,6 +94,12 @@ export default function App() {
     const next = { ...preferences, ...updated };
     setPreferences(next);
     localStorage.setItem("nutri_preferences", JSON.stringify(next));
+  };
+
+  const handleSavePreferences = (updated: UserPreferences) => {
+    setPreferences(updated);
+    localStorage.setItem("nutri_preferences", JSON.stringify(updated));
+    toast.success(`Perfil de ${updated.userName} configurado e calibrado com sucesso!`);
   };
 
   const handleAddExcluded = (e: FormEvent) => {
@@ -120,14 +138,25 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preferences, pantry: items, actionType: "suggest-recipes-pantry" }),
-      }).then(res => res.json()),
+      }).then(async (res) => {
+        const data = await res.json();
+        if (data && data.error) {
+          throw new Error(data.error);
+        }
+        if (!Array.isArray(data)) {
+          throw new Error("Formato incorreto ou indisponibilidade temporária do modelo.");
+        }
+        return data;
+      }),
       {
-        loading: "Escanenado despensa e gerando receitas saudáveis com Gemini...",
+        loading: "Cruzando alérgenos e gerando receitas clínicas...",
         success: (recipes) => {
           setExternalRecipes(recipes);
-          return "Receitas personalizadas geradas com sucesso!";
+          return "Delícias saudáveis criadas e recomendadas!";
         },
-        error: "Erro ao gerar receitas da geladeira."
+        error: (err: any) => {
+          return `Não foi possível rodar receitas: ${err?.message || "Serviço indisponível"}`;
+        }
       }
     );
   };
@@ -150,9 +179,18 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="hidden sm:inline-block text-[10px] font-bold px-2.5 py-1 bg-green-50 text-green-700 border border-green-100 rounded-full">
-            ● PWA Ativo / Offline OK
-          </span>
+          {preferences.userName && (
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 bg-pink-55 bg-pink-50 text-pink-600 border border-pink-100 rounded-full">
+              👋 Olá, {preferences.userName}!
+            </span>
+          )}
+          <button
+            onClick={() => setShowWhoAmI(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-pink-500 to-purple-500 hover:opacity-95 text-white rounded-xl shadow-sm text-xs font-extrabold btn-interactive touch-target"
+            title="Quem Sou Eu?"
+          >
+            <User className="w-3.5 h-3.5" /> Quem Sou Eu?
+          </button>
           <button
             onClick={() => setShowPreferencesEditor(!showPreferencesEditor)}
             className="p-2 bg-white border border-stone-100 rounded-xl shadow-sm text-stone-500 hover:text-pink-500 hover:bg-pink-50/20 transition-all btn-interactive touch-target"
@@ -354,6 +392,13 @@ export default function App() {
 
       {/* PWA banner to slide-up */}
       <InstallPwaBanner />
+
+      <WhoAmI 
+        preferences={preferences}
+        onSave={handleSavePreferences}
+        isOpen={showWhoAmI}
+        onClose={() => setShowWhoAmI(false)}
+      />
     </div>
   );
 }

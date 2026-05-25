@@ -3,6 +3,7 @@ export type ClinicalRestriction = 'lactose' | 'celiac' | 'none';
 export type ClinicalTreatment = 'mounjaro' | 'ozempic' | 'none';
 
 export interface UserPreferences {
+  userName?: string;
   excludedIngredients: string[];
   clinicalRestrictions: ClinicalRestriction[];
   clinicalTreatment: ClinicalTreatment;
