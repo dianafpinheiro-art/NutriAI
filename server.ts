@@ -41,6 +41,8 @@ app.get("/api/health", (req: Request, res: Response) => {
 // Endpoint 1: Generate recipes or meal plans based on rules
 app.post("/api/gemini/generate-menu", async (req: Request, res: Response) => {
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    console.log("Gemini model: gemini-2.5-flash, apiKey present:", !!apiKey);
     const { preferences, pantry, actionType } = req.body;
     const client = getGeminiClient();
 
@@ -84,7 +86,7 @@ Para cada receita, calcule o percentual de correspondência com a despensa (matc
         items: {
           type: Type.OBJECT,
           properties: {
-            title: { type: Type.STRING, description: "Nome único e criativo da receita" },
+            title: { type: Type.STRING, description: "Nome unico e criativo da receita" },
             prepTime: { type: Type.STRING, description: "Tempo estimado, ex: '25 min'" },
             matchPercentage: { type: Type.INTEGER, description: "Porcentagem de aproveitamento dos itens da despensa (0-100)" },
             ingredients: {
@@ -97,7 +99,7 @@ Para cada receita, calcule o percentual de correspondência com a despensa (matc
               items: { type: Type.STRING },
               description: "Passo a passo simples de preparo"
             },
-            calories: { type: Type.INTEGER, description: "Estimativa calórica por porção" }
+            calories: { type: Type.INTEGER, description: "Estimativa calorica por porcao" }
           },
           required: ["title", "prepTime", "matchPercentage", "ingredients", "instructions"]
         }
@@ -115,13 +117,13 @@ Inclua as quantidades exatas para montagem de lista de compras posterior.`;
         items: {
           type: Type.OBJECT,
           properties: {
-            dayName: { type: Type.STRING, description: "Dia da semana (ex: Segunda-feira, Terça-feira)" },
+            dayName: { type: Type.STRING, description: "Dia da semana (ex: Segunda-feira, Terca-feira)" },
             meals: {
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  type: { type: Type.STRING, description: "Tipo de refeição: café-da-manhã, almoço, lanche ou jantar" },
+                  type: { type: Type.STRING, description: "Tipo de refeicao: cafe-da-manha, almoco, lanche ou jantar" },
                   name: { type: Type.STRING, description: "Nome elegante do prato" },
                   calories: { type: Type.INTEGER, description: "Estimativa de calorias" },
                   ingredients: {
@@ -135,7 +137,7 @@ Inclua as quantidades exatas para montagem de lista de compras posterior.`;
                       required: ["name", "quantity"]
                     }
                   },
-                  instructions: { type: Type.STRING, description: "Resumo rápido de preparo saudável em 1 parágrafo" }
+                  instructions: { type: Type.STRING, description: "Resumo rapido de preparo saudável em 1 paragrafo" }
                 },
                 required: ["type", "name", "ingredients", "instructions"]
               }
@@ -147,7 +149,6 @@ Inclua as quantidades exatas para montagem de lista de compras posterior.`;
     }
 
     // Check if we should use smart rule-compliant mock fallback directly
-    const apiKey = process.env.GEMINI_API_KEY;
     const isMock = !apiKey || 
                    apiKey === "MY_GEMINI_API_KEY" || 
                    apiKey === "" || 
@@ -163,7 +164,7 @@ Inclua as quantidades exatas para montagem de lista de compras posterior.`;
     try {
       // Call real Gemini
       const response = await client.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: userPrompt,
         config: {
           responseMimeType: "application/json",
@@ -472,10 +473,11 @@ function getHealthCompliantFallback(preferences: any, actionType: string): any {
 // Endpoint 2: Read PDF Medical Prescriptions (Dropzone)
 app.post("/api/gemini/parse-prescription", async (req: Request, res: Response) => {
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    console.log("Gemini model: gemini-2.5-flash, apiKey present:", !!apiKey);
     const { filename, fileContent } = req.body; // base64 encoded string or raw body
     const client = getGeminiClient();
 
-    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
       console.warn("Using mock parse prescription");
       return res.json({
@@ -503,7 +505,7 @@ app.post("/api/gemini/parse-prescription", async (req: Request, res: Response) =
 - Resumo conciso de observações do médico/nutricionista.`;
 
     const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: [filePart, { text: promptText }],
       config: {
         responseMimeType: "application/json",
@@ -535,10 +537,11 @@ app.post("/api/gemini/parse-prescription", async (req: Request, res: Response) =
 // Endpoint 3: Computer Vision (Pantry / Fridge image analyzer helper)
 app.post("/api/gemini/analyze-pantry-image", async (req: Request, res: Response) => {
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    console.log("Gemini model: gemini-2.5-flash, apiKey present:", !!apiKey);
     const { image } = req.body; // Base64 string from camera / file
     const client = getGeminiClient();
 
-    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
       // Static beautifully simulated detected items
       return res.json({
@@ -563,7 +566,7 @@ app.post("/api/gemini/analyze-pantry-image", async (req: Request, res: Response)
     const promptText = `Identifique todos os ingredientes e alimentos comestíveis visíveis nesta foto de despensa/geladeira. Forneça uma lista de alimentos contendo o nome do ingrediente, uma estimativa visual da quantidade e a categoria principal (ex: Proteínas, Legumes, Carboidratos, Frutas, Laticínios, Mercearia).`;
 
     const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: [imagePart, { text: promptText }],
       config: {
         responseMimeType: "application/json",
@@ -599,10 +602,11 @@ app.post("/api/gemini/analyze-pantry-image", async (req: Request, res: Response)
 // Endpoint 4: Label scanning for allergens
 app.post("/api/gemini/analyze-labels", async (req: Request, res: Response) => {
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    console.log("Gemini model: gemini-2.5-flash, apiKey present:", !!apiKey);
     const { labelText, restrictionType } = req.body;
     const client = getGeminiClient();
 
-    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
       const textLower = labelText.toLowerCase();
       let alert = false;
@@ -633,7 +637,7 @@ Determine se é estritamente seguro para um paciente com a restrição: "${restr
 Retorne a segurança do rótulo, se algum alérgeno de risco foi isolado e o motivo nutricional.`;
 
     const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: promptText,
       config: {
         responseMimeType: "application/json",
