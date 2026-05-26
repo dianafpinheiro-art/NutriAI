@@ -2,7 +2,6 @@ import express, { Request, Response } from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
-import { createServer as createViteServer } from "vite";
 
 dotenv.config();
 
@@ -668,6 +667,7 @@ Retorne a segurança do rótulo, se algum alérgeno de risco foi isolado e o mot
 // Configure Vite as Middleware or serve static build
 async function startServer() {
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
