@@ -6,6 +6,8 @@ import { createServer as createViteServer } from "vite";
 
 dotenv.config();
 
+process.env.NODE_ENV = process.env.NODE_ENV || "production";
+
 const app = express();
 app.use(express.json({ limit: "15mb" }));
 
@@ -665,7 +667,7 @@ Retorne a segurança do rótulo, se algum alérgeno de risco foi isolado e o mot
 
 // Configure Vite as Middleware or serve static build
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
