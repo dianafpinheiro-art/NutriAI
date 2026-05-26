@@ -49,6 +49,30 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preferences, pantry, actionType: "generate-weekly-menu" }),
       });
+
+      if (!response.ok) {
+        let errorBody = "";
+        try {
+          errorBody = await response.text();
+        } catch {
+          errorBody = "(Não foi possível ler o corpo do erro)";
+        }
+        console.error(`Erro de Rede / HTTP: Status ${response.status} - ${response.statusText}`, errorBody);
+        throw new Error(`HTTP ${response.status} (${response.statusText}). Detalhes do erro: ${errorBody.substring(0, 300)}`);
+      }
+
+      const contentType = response.headers.get("Content-Type") || "";
+      if (!contentType.includes("application/json")) {
+        let bodySnippet = "";
+        try {
+          bodySnippet = await response.text();
+        } catch {
+          bodySnippet = "(Não foi possível obter o corpo)";
+        }
+        console.error(`A resposta recebida não é um JSON válido. Content-Type: ${contentType}`, bodySnippet);
+        throw new Error(`Tipagem de resposta incorreta (Esperava JSON, mas o Content-Type do servidor foi: ${contentType}). Snippet do conteúdo: ${bodySnippet.substring(0, 250)}`);
+      }
+
       const data = await response.json();
       if (Array.isArray(data)) {
         setMealPlan(data);
@@ -81,7 +105,8 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
         throw new Error("Formato inválido retornado do motor de inteligência.");
       }
     } catch (err: any) {
-      alert("Erro ao conectar ao motor clínico. " + err?.message);
+      console.error("Erro completo na geração do plano de refeições:", err);
+      alert("Erro ao conectar ao motor clínico.\n\n" + err?.message);
     } finally {
       setMenuLoading(false);
     }

@@ -1,4 +1,4 @@
-const CACHE_NAME = "nutriai-cache-v3";
+const CACHE_NAME = "nutriai-cache-v4";
 const ASSETS = [
   "/",
   "/index.html",
@@ -51,27 +51,62 @@ self.addEventListener("fetch", (e) => {
   }
 
   // 2. Cache storage ONLY supports GET and HEAD requests. Non-GET requests (like POST)
-  // are NOT handled by the Service Worker. Let the browser handle them naturally.
+  // are NOT handled by the Service Worker. Let the browser handle them naturally on the network.
   if (e.request.method !== "GET" && e.request.method !== "HEAD") {
     return;
   }
 
-  // For general static layout assets, use a robust Cache-First with Network feedback in the background
-  e.respondWith(
-    caches.match(e.request).then((cachedRes) => {
-      if (cachedRes) {
-        // Fetch background update to ensure fresh layout code on next visit
-        fetch(e.request)
-          .then((networkRes) => {
-            if (networkRes.status === 200) {
-              const resClone = networkRes.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+  // Determine if the asset is structural/dynamic (HTML, JS, TS, TSX, CSS, JSON config)
+  // or purely static media/design files (Images, Fonts, SVG)
+  const isDocOrScript = 
+    url.pathname === "/" ||
+    url.pathname.endsWith(".html") ||
+    url.pathname.endsWith(".js") ||
+    url.pathname.endsWith(".tsx") ||
+    url.pathname.endsWith(".ts") ||
+    url.pathname.endsWith(".css") ||
+    url.pathname.endsWith(".json");
+
+  if (isDocOrScript) {
+    // 3. Network-First with Cache fallback strategy
+    e.respondWith(
+      fetch(e.request)
+        .then((networkRes) => {
+          if (networkRes.status === 200) {
+            const resClone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+          }
+          return networkRes;
+        })
+        .catch(() => {
+          return caches.match(e.request).then((cachedRes) => {
+            if (cachedRes) {
+              return cachedRes;
             }
-          })
-          .catch((err) => console.log("Background fetch update failed:", err));
-        return cachedRes;
-      }
-      return fetch(e.request);
-    })
-  );
+            // Dynamic SPA Routing fallback
+            if (url.pathname !== "/" && !url.pathname.includes(".")) {
+              return caches.match("/");
+            }
+          });
+        })
+    );
+  } else {
+    // 4. Cache-First with Network background sync for media, images, and fonts
+    e.respondWith(
+      caches.match(e.request).then((cachedRes) => {
+        if (cachedRes) {
+          fetch(e.request)
+            .then((networkRes) => {
+              if (networkRes.status === 200) {
+                const resClone = networkRes.clone();
+                caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+              }
+            })
+            .catch((err) => console.log("Background fetch update failed:", err));
+          return cachedRes;
+        }
+        return fetch(e.request);
+      })
+    );
+  }
 });
