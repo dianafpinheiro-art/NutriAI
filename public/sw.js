@@ -1,4 +1,4 @@
-const CACHE_NAME = "nutriai-cache-v2";
+const CACHE_NAME = "nutriai-cache-v3";
 const ASSETS = [
   "/",
   "/index.html",
@@ -34,58 +34,44 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
+// Skip Waiting via postMessage
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 // Fetch Strategy
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
 
-  // Cache storage ONLY supports GET and HEAD requests. Non-GET requests (like POST)
-  // are NOT handled by the Service Worker. Let the browser handle them naturally on the network.
+  // 1. COMPLETELY BYPASS all API calls to avoid body stream locks/corruption in Safari
+  if (url.pathname.startsWith("/api/")) {
+    return;
+  }
+
+  // 2. Cache storage ONLY supports GET and HEAD requests. Non-GET requests (like POST)
+  // are NOT handled by the Service Worker. Let the browser handle them naturally.
   if (e.request.method !== "GET" && e.request.method !== "HEAD") {
     return;
   }
 
-  // For API endpoints, use Network-First
-  if (url.pathname.startsWith("/api/")) {
-    e.respondWith(
-      fetch(e.request)
-        .then((res) => {
-          // Cache successful standard GET api responses
-          if (res.status === 200) {
-            const resClone = res.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(e.request, resClone);
-            });
-          }
-          return res;
-        })
-        .catch(() => {
-          // If network fails, serve from cache
-          return caches.match(e.request).then((cachedRes) => {
-            if (cachedRes) return cachedRes;
-            // Fallback JSON
-            return new Response(
-              JSON.stringify({ error: "Indisponível no momento. Você está offline." }),
-              { headers: { "Content-Type": "application/json" } }
-            );
-          });
-        })
-    );
-  } else {
-    // For general static layout files, default to Cache-First with Network feedback
-    e.respondWith(
-      caches.match(e.request).then((cachedRes) => {
-        if (cachedRes) {
-          // Fetch background update
-          fetch(e.request).then((networkRes) => {
+  // For general static layout assets, use a robust Cache-First with Network feedback in the background
+  e.respondWith(
+    caches.match(e.request).then((cachedRes) => {
+      if (cachedRes) {
+        // Fetch background update to ensure fresh layout code on next visit
+        fetch(e.request)
+          .then((networkRes) => {
             if (networkRes.status === 200) {
               const resClone = networkRes.clone();
               caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
             }
-          }).catch((err) => console.log("Background fetch failed:", err));
-          return cachedRes;
-        }
-        return fetch(e.request);
-      })
-    );
-  }
+          })
+          .catch((err) => console.log("Background fetch update failed:", err));
+        return cachedRes;
+      }
+      return fetch(e.request);
+    })
+  );
 });
