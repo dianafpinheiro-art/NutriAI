@@ -15,6 +15,7 @@ import {
   User
 } from "lucide-react";
 import { UserPreferences, PantryIngredient, RecipeResult } from "./types";
+import { Analytics } from "@vercel/analytics/react";
 
 // Inner Components
 import HydrationTracker from "./components/HydrationTracker";
@@ -399,6 +400,9 @@ export default function App() {
         isOpen={showWhoAmI}
         onClose={() => setShowWhoAmI(false)}
       />
+
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 }
