@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Toaster, toast } from "sonner";
 import { 
   Heart, 
@@ -14,8 +14,9 @@ import {
   AlertCircle,
   User
 } from "lucide-react";
-import { UserPreferences, PantryIngredient, RecipeResult } from "./types";
+import { UserPreferences, PantryIngredient, RecipeResult, Locale } from "./types";
 import { Analytics } from "@vercel/analytics/react";
+import { localeLabels, t } from "./i18n";
 
 // Inner Components
 import HydrationTracker from "./components/HydrationTracker";
@@ -25,17 +26,42 @@ import MounjaroMonitor from "./components/MounjaroMonitor";
 import PantryScanner from "./components/PantryScanner";
 import MealPlanner from "./components/MealPlanner";
 import InstallPwaBanner from "./components/InstallPwaBanner";
+import ReminderCenter from "./components/ReminderCenter";
 import WhoAmI from "./components/WhoAmI";
 
 export default function App() {
-  const [preferences, setPreferences] = useState<UserPreferences>({
+  const defaultPreferences: UserPreferences = {
     userName: "",
     excludedIngredients: ["berinjela", "coentro"],
     clinicalRestrictions: ["lactose"],
     clinicalTreatment: "mounjaro",
     dietType: "low-carb",
     dailyWaterGoal: 2500,
+    locale: "pt",
+    reminders: {
+      hydrationEnabled: true,
+      hydrationIntervalMinutes: 120,
+      mealEnabled: true,
+      mealIntervalHours: 3,
+      activeStart: "08:00",
+      activeEnd: "21:00",
+    },
+  };
+
+  const normalizePreferences = (prefs: Partial<UserPreferences>): UserPreferences => ({
+    ...defaultPreferences,
+    ...prefs,
+    excludedIngredients: prefs.excludedIngredients ?? defaultPreferences.excludedIngredients,
+    clinicalRestrictions: prefs.clinicalRestrictions ?? defaultPreferences.clinicalRestrictions,
+    reminders: {
+      ...defaultPreferences.reminders!,
+      ...(prefs.reminders ?? {}),
+      mealIntervalHours: prefs.prescriptionMealIntervalHours ?? prefs.reminders?.mealIntervalHours ?? defaultPreferences.reminders!.mealIntervalHours,
+    },
   });
+
+  const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
+  const locale = preferences.locale ?? "pt";
 
   const [pantry, setPantry] = useState<PantryIngredient[]>([]);
   const [externalRecipes, setExternalRecipes] = useState<RecipeResult[] | null>(null);
@@ -52,7 +78,7 @@ export default function App() {
 
     if (savedPrefs) {
       try {
-        setPreferences(JSON.parse(savedPrefs));
+        setPreferences(normalizePreferences(JSON.parse(savedPrefs)));
       } catch (e) {
         console.error(e);
       }
@@ -75,12 +101,12 @@ export default function App() {
 
     // TriggerSonner PWA interactive notification for update availability on second startup
     setTimeout(() => {
-      toast("Nova versão disponível (v2.1.0-pwa)!", {
-        description: "Mais ágil, com correções de rodízio e alérgenos. Atualizar?",
+      toast(t(locale, "updateAvailable"), {
+        description: t(locale, "updateDescription"),
         action: {
-          label: "Atualizar",
+          label: t(locale, "updateAction"),
           onClick: () => {
-            toast.success("Atualizando cache estável...");
+            toast.success(t(locale, "updatingCache"));
             setTimeout(() => {
               window.location.reload();
             }, 1000);
@@ -100,7 +126,7 @@ export default function App() {
   const handleSavePreferences = (updated: UserPreferences) => {
     setPreferences(updated);
     localStorage.setItem("nutri_preferences", JSON.stringify(updated));
-    toast.success(`Perfil de ${updated.userName} configurado e calibrado com sucesso!`);
+    toast.success(t(updated.locale ?? locale, "profileSaved", { name: updated.userName || "PersonalDiet" }));
   };
 
   const handleAddExcluded = (e: FormEvent) => {
@@ -109,7 +135,7 @@ export default function App() {
     const cleanTerm = newExcluded.trim().toLowerCase();
     
     if (preferences.excludedIngredients.includes(cleanTerm)) {
-      alert("Este ingrediente já está banido!");
+      alert(t(locale, "duplicateIngredient"));
       return;
     }
 
@@ -138,25 +164,25 @@ export default function App() {
       fetch("/api/gemini/generate-menu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ preferences, pantry: items, actionType: "suggest-recipes-pantry" }),
+        body: JSON.stringify({ preferences, pantry: items, actionType: "suggest-recipes-pantry", locale, languageInstruction: t(locale, "mealPlanLanguageInstruction") }),
       }).then(async (res) => {
         const data = await res.json();
         if (data && data.error) {
           throw new Error(data.error);
         }
         if (!Array.isArray(data)) {
-          throw new Error("Formato incorreto ou indisponibilidade temporária do modelo.");
+          throw new Error(t(locale, "recipesBadFormat"));
         }
         return data;
       }),
       {
-        loading: "Cruzando alérgenos e gerando receitas clínicas...",
+        loading: t(locale, "recipesLoading"),
         success: (recipes) => {
           setExternalRecipes(recipes);
-          return "Delícias saudáveis criadas e recomendadas!";
+          return t(locale, "recipesSuccess");
         },
         error: (err: any) => {
-          return `Não foi possível rodar receitas: ${err?.message || "Serviço indisponível"}`;
+          return t(locale, "recipesError", { message: err?.message || t(locale, "serviceUnavailable") });
         }
       }
     );
@@ -175,27 +201,27 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-base font-extrabold tracking-tight text-stone-800 font-heading leading-none">PersonalDiet</h1>
-            <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">Suporte Clínico Avançado</span>
+            <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">{t(locale, "appSubtitle")}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {preferences.userName && (
             <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 bg-pink-55 bg-pink-50 text-pink-600 border border-pink-100 rounded-full">
-              👋 Olá, {preferences.userName}!
+              {t(locale, "hello", { name: preferences.userName })}
             </span>
           )}
           <button
             onClick={() => setShowWhoAmI(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-pink-500 to-purple-500 hover:opacity-95 text-white rounded-xl shadow-sm text-xs font-extrabold btn-interactive touch-target"
-            title="Quem Sou Eu?"
+            title={t(locale, "whoAmI")}
           >
-            <User className="w-3.5 h-3.5" /> Quem Sou Eu?
+            <User className="w-3.5 h-3.5" /> {t(locale, "whoAmI")}
           </button>
           <button
             onClick={() => setShowPreferencesEditor(!showPreferencesEditor)}
             className="p-2 bg-white border border-stone-100 rounded-xl shadow-sm text-stone-500 hover:text-pink-500 hover:bg-pink-50/20 transition-all btn-interactive touch-target"
-            title="Preferências Clínicas"
+            title={t(locale, "clinicalPreferences")}
           >
             <Settings className="w-5 h-5" />
           </button>
@@ -211,13 +237,13 @@ export default function App() {
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <div className="flex items-center gap-2">
                 <Sliders className="w-5 h-5 text-pink-500" />
-                <h3 className="font-heading font-extrabold text-stone-800 text-sm">Controle de Preferências e Restrições Clínicas</h3>
+                <h3 className="font-heading font-extrabold text-stone-800 text-sm">{t(locale, "preferencesTitle")}</h3>
               </div>
               <button 
                 onClick={() => setShowPreferencesEditor(false)}
                 className="text-xs text-stone-400 hover:text-stone-600 font-bold"
               >
-                Ocultar
+                {t(locale, "hide")}
               </button>
             </div>
 
@@ -225,35 +251,48 @@ export default function App() {
               {/* Clinical treatment details */}
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1">Tratamento Clínico (Peptídeos GLP-1)</label>
+                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1">{t(locale, "language")}</label>
+                  <select
+                    value={locale}
+                    onChange={(e) => handleUpdatePreferences({ locale: e.target.value as Locale })}
+                    className="w-full text-xs p-2.5 outline-none border border-stone-200 rounded-xl bg-stone-50 font-bold cursor-pointer focus:border-pink-300 focus:bg-white transition-all"
+                  >
+                    {Object.entries(localeLabels).map(([code, label]) => (
+                      <option key={code} value={code}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1">{t(locale, "clinicalTreatment")}</label>
                   <select
                     value={preferences.clinicalTreatment}
                     onChange={(e) => handleUpdatePreferences({ clinicalTreatment: e.target.value as any })}
                     className="w-full text-xs p-2.5 outline-none border border-stone-200 rounded-xl bg-stone-50 font-bold cursor-pointer focus:border-pink-300 focus:bg-white transition-all"
                   >
-                    <option value="none">Nenhum em andamento</option>
-                    <option value="mounjaro">Tirzepatida (Mounjaro)</option>
-                    <option value="ozempic">Semaglutida (Ozempic)</option>
+                    <option value="none">{t(locale, "treatmentNone")}</option>
+                    <option value="mounjaro">{t(locale, "treatmentMounjaro")}</option>
+                    <option value="ozempic">{t(locale, "treatmentOzempic")}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1">Estilo de Dieta Alvo</label>
+                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1">{t(locale, "dietStyle")}</label>
                   <select
                     value={preferences.dietType}
                     onChange={(e) => handleUpdatePreferences({ dietType: e.target.value as any })}
                     className="w-full text-xs p-2.5 outline-none border border-stone-200 rounded-xl bg-stone-50 font-bold cursor-pointer focus:border-pink-300 focus:bg-white transition-all"
                   >
-                    <option value="none">Dieta Padrão / Saudável</option>
-                    <option value="low-carb">Dieta Baixo Carboidrato (Low-carb)</option>
-                    <option value="cetogenica">Dieta Cetogênica</option>
-                    <option value="mediterranea">Dieta Mediterrânea</option>
-                    <option value="deficit-calorico">Dieta com Déficit Calórico</option>
+                    <option value="none">{t(locale, "dietNone")}</option>
+                    <option value="low-carb">{t(locale, "dietLowCarb")}</option>
+                    <option value="cetogenica">{t(locale, "dietKeto")}</option>
+                    <option value="mediterranea">{t(locale, "dietMediterranean")}</option>
+                    <option value="deficit-calorico">{t(locale, "dietDeficit")}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1.5">Severidade e Condições Clínicas Coletivas</label>
+                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1.5">{t(locale, "clinicalConditions")}</label>
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={() => handleToggleRestriction("celiac")}
@@ -263,7 +302,7 @@ export default function App() {
                           : "bg-stone-50 text-stone-600 border-stone-200/50"
                       }`}
                     >
-                      <span>Diagnóstico de Doença Celíaca (Glúten-Free Estrito)</span>
+                      <span>{t(locale, "celiacStrict")}</span>
                       {preferences.clinicalRestrictions.includes("celiac") && "✓"}
                     </button>
                     <button
@@ -274,7 +313,7 @@ export default function App() {
                           : "bg-stone-50 text-stone-600 border-stone-200/50"
                       }`}
                     >
-                      <span>Intolerância Crônica à Lactose (Zero Laticínios)</span>
+                      <span>{t(locale, "lactoseStrict")}</span>
                       {preferences.clinicalRestrictions.includes("lactose") && "✓"}
                     </button>
                   </div>
@@ -284,7 +323,7 @@ export default function App() {
               {/* Exclusion lists */}
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1">Meta Hidratação Diária (ml)</label>
+                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1">{t(locale, "waterGoal")}</label>
                   <input
                     type="number"
                     value={preferences.dailyWaterGoal}
@@ -294,11 +333,11 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1">Excluir Ingrediente por Preferência Pessoal (Banir)</label>
+                  <label className="text-xs font-heading font-bold text-stone-700 block mb-1">{t(locale, "excludedIngredient")}</label>
                   <form onSubmit={handleAddExcluded} className="flex gap-1.5">
                     <input
                       type="text"
-                      placeholder="Ex: cebola, pimenta, abacate"
+                      placeholder={t(locale, "excludedPlaceholder")}
                       value={newExcluded}
                       onChange={(e) => setNewExcluded(e.target.value)}
                       className="w-full text-xs p-2.5 outline-none border border-stone-200 rounded-xl bg-stone-50 font-semibold focus:border-pink-300 focus:bg-white transition-all"
@@ -307,7 +346,7 @@ export default function App() {
                       type="submit"
                       className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white text-xs font-bold rounded-xl btn-interactive"
                     >
-                      Banir
+                      {t(locale, "ban")}
                     </button>
                   </form>
                   
@@ -318,7 +357,7 @@ export default function App() {
                           key={ing} 
                           className="inline-flex items-center gap-1 text-[10px] font-bold bg-stone-100 hover:bg-red-50 text-stone-600 hover:text-red-700 px-2 py-1 rounded-lg transition-colors cursor-pointer border border-stone-200/40"
                           onClick={() => handleRemoveExcluded(ing)}
-                          title="Clique para remover banimento"
+                          title={t(locale, "removeBanTitle")}
                         >
                           {ing} <Trash2 className="w-2.5 h-2.5 text-stone-400" />
                         </span>
@@ -330,6 +369,12 @@ export default function App() {
             </div>
           </div>
         )}
+
+        <ReminderCenter
+          preferences={preferences}
+          onUpdatePreferences={handleUpdatePreferences}
+          locale={locale}
+        />
 
         {/* GRID LAYOUT FOR CORE UTILITIES */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -366,6 +411,8 @@ export default function App() {
                   clinicalRestrictions: updates.clinicalRestrictions,
                   dailyWaterGoal: updates.dailyWaterGoal ?? preferences.dailyWaterGoal,
                   clinicalTreatment: updates.clinicalTreatment ?? preferences.clinicalTreatment,
+                  prescriptionMealIntervalHours: updates.prescriptionMealIntervalHours ?? preferences.prescriptionMealIntervalHours,
+                  reminders: updates.reminders ?? preferences.reminders,
                 });
               }}
               currentRestrictions={preferences.clinicalRestrictions}

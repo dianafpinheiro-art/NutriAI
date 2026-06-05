@@ -44,7 +44,7 @@ app.post("/api/gemini/generate-menu", async (req: Request, res: Response) => {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     console.log("Gemini model: gemini-2.5-flash, apiKey present:", !!apiKey);
-    const { preferences, pantry, actionType } = req.body;
+    const { preferences, pantry, actionType, languageInstruction } = req.body;
     const client = getGeminiClient();
 
     const excludedList = (preferences?.excludedIngredients || []).join(", ");
@@ -52,6 +52,7 @@ app.post("/api/gemini/generate-menu", async (req: Request, res: Response) => {
     const currentTreatment = preferences?.clinicalTreatment || "none";
     const selectedDiet = preferences?.dietType || "none";
     const pantryItemsString = (pantry || []).map((item: any) => `${item.name} (${item.quantity})`).join(", ");
+    const localeInstruction = languageInstruction || "Responda todo o conteúdo em português brasileiro.";
 
     // Build targeted context instructions
     let contextGuidelines = "";
@@ -79,6 +80,7 @@ app.post("/api/gemini/generate-menu", async (req: Request, res: Response) => {
 Adapte para as seguintes restrições:
 ${contextGuidelines}
 
+${localeInstruction}
 Para cada receita, calcule o percentual de correspondência com a despensa (matchPercentage) e os ingredientes em falta se aplicável.`;
 
       responseSchema = {
@@ -110,6 +112,7 @@ Para cada receita, calcule o percentual de correspondência com a despensa (matc
       userPrompt = `Gere um cardápio semanal nutricional prático com 3 dias (Segunda, Terça, Quarta) com 4 refeições diárias (cafe-da-manha, almoco, lanche, jantar) que siga estritamente estas condições:
 ${contextGuidelines}
 
+${localeInstruction}
 Inclua as quantidades exatas para montagem de lista de compras posterior.`;
 
       responseSchema = {
@@ -488,6 +491,7 @@ app.post("/api/gemini/parse-prescription", async (req: Request, res: Response) =
         waterGoalMl: 2800,
         clinicalTreatment: "mounjaro",
         doctorNotes: "Prescrição lida: Dieta low-carb focada em controle glicêmico, com restrição severa de lactose devido a sintomas intestinais recorrentes. Início de tratamento com Mounjaro 2.5mg para gerenciamento metabólico.",
+        mealIntervalHours: 3,
       });
     }
 
@@ -503,6 +507,7 @@ app.post("/api/gemini/parse-prescription", async (req: Request, res: Response) =
 - Restrições clínicas detectadas (celiaco/gluten-free, intolerancia-lactose, etc)
 - Meta diária de água sugerida (numérico em ml)
 - Tratamentos adicionais detectados (mounjaro, ozempic)
+- Intervalo alimentar recomendado em horas, se a prescrição mencionar comer de X em X horas; se não mencionar, use 3
 - Resumo conciso de observações do médico/nutricionista.`;
 
     const response = await client.models.generateContent({
@@ -520,9 +525,10 @@ app.post("/api/gemini/parse-prescription", async (req: Request, res: Response) =
             },
             waterGoalMl: { type: Type.INTEGER },
             clinicalTreatment: { type: Type.STRING },
-            doctorNotes: { type: Type.STRING }
+            doctorNotes: { type: Type.STRING },
+            mealIntervalHours: { type: Type.INTEGER }
           },
-          required: ["detectedDiet", "detectedRestrictions", "waterGoalMl", "clinicalTreatment", "doctorNotes"]
+          required: ["detectedDiet", "detectedRestrictions", "waterGoalMl", "clinicalTreatment", "doctorNotes", "mealIntervalHours"]
         }
       }
     });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sparkles, ShoppingBag, CheckSquare, Square, Check, RefreshCw, Calendar, Download, AlertOctagon, Heart, ListPlus, Printer } from "lucide-react";
 import { DayMealPlan, PantryIngredient, UserPreferences, RecipeResult, ShoppingItem } from "../types";
+import { t } from "../i18n";
 
 interface MealPlannerProps {
   preferences: UserPreferences;
@@ -47,7 +48,13 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
       const response = await fetch("/api/gemini/generate-menu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ preferences, pantry, actionType: "generate-weekly-menu" }),
+        body: JSON.stringify({
+          preferences,
+          pantry,
+          actionType: "generate-weekly-menu",
+          locale: preferences.locale ?? "pt",
+          languageInstruction: t(preferences.locale ?? "pt", "mealPlanLanguageInstruction"),
+        }),
       });
 
       if (!response.ok) {

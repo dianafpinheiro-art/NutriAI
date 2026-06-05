@@ -1,10 +1,17 @@
 import { useState, useEffect, FormEvent } from "react";
 import { Search, Plus, Trash2, Camera, FileText, AlertTriangle, ShieldCheck, CheckCircle2, RefreshCw, Upload, Sparkles, Check, Heart, X, CheckSquare, Square, Eye, Edit2 } from "lucide-react";
-import { PantryIngredient, ClinicalRestriction } from "../types";
+import { PantryIngredient, ClinicalRestriction, ReminderSettings } from "../types";
 
 interface PantryScannerProps {
   onSuggestRecipes: (pantryItems: PantryIngredient[]) => void;
-  onUpdatePreferences: (updates: { dietType: any; clinicalRestrictions: any[]; dailyWaterGoal?: number; clinicalTreatment?: any }) => void;
+  onUpdatePreferences: (updates: {
+    dietType: any;
+    clinicalRestrictions: any[];
+    dailyWaterGoal?: number;
+    clinicalTreatment?: any;
+    prescriptionMealIntervalHours?: number;
+    reminders?: ReminderSettings;
+  }) => void;
   currentRestrictions: ClinicalRestriction[];
 }
 
@@ -235,6 +242,15 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
       clinicalRestrictions: parsedPrescription.detectedRestrictions,
       dailyWaterGoal: parsedPrescription.waterGoalMl,
       clinicalTreatment: parsedPrescription.clinicalTreatment,
+      prescriptionMealIntervalHours: parsedPrescription.mealIntervalHours || 3,
+      reminders: {
+        hydrationEnabled: true,
+        hydrationIntervalMinutes: 120,
+        mealEnabled: true,
+        mealIntervalHours: parsedPrescription.mealIntervalHours || 3,
+        activeStart: "08:00",
+        activeEnd: "21:00",
+      },
     });
 
     alert("As diretrizes nutricionais extraídas do PDF foram aplicadas com sucesso em suas preferências de perfil!");

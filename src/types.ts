@@ -1,6 +1,16 @@
 export type DietType = 'low-carb' | 'cetogenica' | 'mediterranea' | 'deficit-calorico' | 'none';
 export type ClinicalRestriction = 'lactose' | 'celiac' | 'none';
 export type ClinicalTreatment = 'mounjaro' | 'ozempic' | 'none';
+export type Locale = 'pt' | 'en' | 'es';
+
+export interface ReminderSettings {
+  hydrationEnabled: boolean;
+  hydrationIntervalMinutes: number;
+  mealEnabled: boolean;
+  mealIntervalHours: number;
+  activeStart: string; // HH:mm
+  activeEnd: string; // HH:mm
+}
 
 export interface UserPreferences {
   userName?: string;
@@ -9,6 +19,9 @@ export interface UserPreferences {
   clinicalTreatment: ClinicalTreatment;
   dietType: DietType;
   dailyWaterGoal: number; // in ml
+  locale?: Locale;
+  prescriptionMealIntervalHours?: number;
+  reminders?: ReminderSettings;
 }
 
 export interface HydrationLog {
