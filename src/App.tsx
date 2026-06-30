@@ -3,20 +3,25 @@ import { Toaster, toast } from "sonner";
 import { 
   Heart, 
   Settings, 
-  Sparkles, 
-  Award, 
   Sliders, 
-  Activity, 
-  RefreshCw,
-  Plus,
   Trash2,
-  Syringe,
-  AlertCircle,
-  User
+  User,
+  Crown,
+  X
 } from "lucide-react";
-import { UserPreferences, PantryIngredient, RecipeResult, Locale } from "./types";
+import { UserPreferences, PantryIngredient, RecipeResult, Locale, DietType, ClinicalTreatment } from "./types";
+import type { Session } from "@supabase/supabase-js";
 import { Analytics } from "@vercel/analytics/react";
 import { localeLabels, t } from "./i18n";
+import { supabase } from "./supabaseClient";
+import { authFetch } from "./authFetch";
+import Auth from "./components/Auth";
+import { fetchUserProfile, fetchPantryItems, upsertUserProfile } from "./dataHooks";
+import { migrateLocalStorageToSupabase } from "./migrateLocalStorage";
+
+import { usePaywall } from "./hooks/usePaywall";
+import SubscriptionPlans from "./components/SubscriptionPlans";
+import SubscriptionManager from "./components/SubscriptionManager";
 
 // Inner Components
 import HydrationTracker from "./components/HydrationTracker";
@@ -67,29 +72,50 @@ export default function App() {
   const [externalRecipes, setExternalRecipes] = useState<RecipeResult[] | null>(null);
   const [showPreferencesEditor, setShowPreferencesEditor] = useState(false);
   const [showWhoAmI, setShowWhoAmI] = useState(false);
+  const [showSubscriptionPlans, setShowSubscriptionPlans] = useState(false);
+  const [showSubscriptionManager, setShowSubscriptionManager] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
 
-  // Form input states for direct reactivity and validation
   const [newExcluded, setNewExcluded] = useState("");
 
   useEffect(() => {
-    // Load state from localStorage on startup
-    const savedPrefs = localStorage.getItem("nutri_preferences");
-    const savedPantry = localStorage.getItem("nutri_pantry_items");
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user?.id) {
+        const uid = session.user.id;
+        // Load preferences from Supabase
+        fetchUserProfile(uid).then((profile) => {
+          if (profile) {
+            setPreferences(normalizePreferences(profile));
+          }
+        });
+        // Load pantry from Supabase
+        fetchPantryItems(uid).then((items) => {
+          setPantry(items);
+        });
+        // Migrate old localStorage data
+        migrateLocalStorageToSupabase(uid);
+      } else {
+      }
+    });
 
-    if (savedPrefs) {
-      try {
-        setPreferences(normalizePreferences(JSON.parse(savedPrefs)));
-      } catch (e) {
-        console.error(e);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user?.id) {
+        const uid = session.user.id;
+        fetchUserProfile(uid).then((profile) => {
+          if (profile) {
+            setPreferences(normalizePreferences(profile));
+          }
+        });
+        fetchPantryItems(uid).then((items) => {
+          setPantry(items);
+        });
+        migrateLocalStorageToSupabase(uid);
       }
-    }
-    if (savedPantry) {
-      try {
-        setPantry(JSON.parse(savedPantry));
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    });
 
     // Auto open WhoAmI onboarding on first visit
     const onboarded = localStorage.getItem("nutri_onboarded");
@@ -99,7 +125,7 @@ export default function App() {
       }, 800);
     }
 
-    // TriggerSonner PWA interactive notification for update availability on second startup
+    // Trigger Sonner PWA interactive notification for update availability on second startup
     setTimeout(() => {
       toast(t(locale, "updateAvailable"), {
         description: t(locale, "updateDescription"),
@@ -115,17 +141,25 @@ export default function App() {
         duration: 10000,
       });
     }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleUpdatePreferences = (updated: Partial<UserPreferences>) => {
     const next = { ...preferences, ...updated };
     setPreferences(next);
-    localStorage.setItem("nutri_preferences", JSON.stringify(next));
+    if (session?.user?.id) {
+      upsertUserProfile(session.user.id, next).catch(() => {});
+    }
   };
 
   const handleSavePreferences = (updated: UserPreferences) => {
     setPreferences(updated);
-    localStorage.setItem("nutri_preferences", JSON.stringify(updated));
+    if (session?.user?.id) {
+      upsertUserProfile(session.user.id, updated).catch(() => {});
+    }
     toast.success(t(updated.locale ?? locale, "profileSaved", { name: updated.userName || "PersonalDiet" }));
   };
 
@@ -135,7 +169,7 @@ export default function App() {
     const cleanTerm = newExcluded.trim().toLowerCase();
     
     if (preferences.excludedIngredients.includes(cleanTerm)) {
-      alert(t(locale, "duplicateIngredient"));
+      toast.error(t(locale, "duplicateIngredient"));
       return;
     }
 
@@ -158,10 +192,9 @@ export default function App() {
     handleUpdatePreferences({ clinicalRestrictions: updated });
   };
 
-  // Called from pantry scanner when Gemini suggests recipes
   const handleSuggestRecipes = async (items: PantryIngredient[]) => {
     toast.promise(
-      fetch("/api/gemini/generate-menu", {
+      authFetch("/api/gemini/generate-menu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preferences, pantry: items, actionType: "suggest-recipes-pantry", locale, languageInstruction: t(locale, "mealPlanLanguageInstruction") }),
@@ -181,19 +214,34 @@ export default function App() {
           setExternalRecipes(recipes);
           return t(locale, "recipesSuccess");
         },
-        error: (err: any) => {
-          return t(locale, "recipesError", { message: err?.message || t(locale, "serviceUnavailable") });
+        error: (err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          return t(locale, "recipesError", { message: message || t(locale, "serviceUnavailable") });
         }
       }
     );
   };
 
+  if (!session) {
+    return <Auth onSession={(session) => setSession(session)} locale={locale} />;
+  }
+
+  const userId = session.user.id;
+  const paywall = usePaywall(userId);
+
+  useEffect(() => {
+    if (paywall.status === "free" || paywall.status === "trial_expired") {
+      const timer = setTimeout(() => {
+        setShowSubscriptionPlans(true);
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [paywall.status]);
+
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-800 pb-20 portrait-safe font-body">
-      {/* Sonner Toaster Container configured */}
       <Toaster position="top-center" richColors />
 
-      {/* Main Header visual branding */}
       <header className="sticky top-0 z-40 bg-[#fafaf9]/85 backdrop-blur-md border-b border-stone-100 px-4 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 bg-gradient-to-tr from-pink-400 to-purple-400 rounded-xl flex items-center justify-center text-white shadow-md shadow-pink-100 animate-spin-slow">
@@ -207,10 +255,17 @@ export default function App() {
 
         <div className="flex items-center gap-2">
           {preferences.userName && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 bg-pink-55 bg-pink-50 text-pink-600 border border-pink-100 rounded-full">
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 bg-pink-50 text-pink-600 border border-pink-100 rounded-full">
               {t(locale, "hello", { name: preferences.userName })}
             </span>
           )}
+          <button
+            onClick={() => setShowSubscriptionManager(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-pink-200 hover:bg-pink-50 text-pink-600 rounded-xl shadow-sm text-xs font-extrabold btn-interactive touch-target"
+            title={t(locale, "manageSubscription")}
+          >
+            <Crown className="w-3.5 h-3.5" /> Premium
+          </button>
           <button
             onClick={() => setShowWhoAmI(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-pink-500 to-purple-500 hover:opacity-95 text-white rounded-xl shadow-sm text-xs font-extrabold btn-interactive touch-target"
@@ -225,13 +280,18 @@ export default function App() {
           >
             <Settings className="w-5 h-5" />
           </button>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="p-2 bg-white border border-stone-100 rounded-xl shadow-sm text-stone-500 hover:text-red-500 hover:bg-red-50/20 transition-all btn-interactive touch-target"
+            title="Sair"
+          >
+            Sair
+          </button>
         </div>
       </header>
 
-      {/* Primary Container Frame */}
       <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6">
 
-        {/* Floating Editor de Preferências & Alérgenos Clínicos */}
         {showPreferencesEditor && (
           <div className="bg-white rounded-3xl p-6 shadow-xl border border-pink-100 animate-fade flex flex-col gap-5">
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
@@ -241,14 +301,13 @@ export default function App() {
               </div>
               <button 
                 onClick={() => setShowPreferencesEditor(false)}
-                className="text-xs text-stone-400 hover:text-stone-600 font-bold"
+                className="text-xs text-stone-400 hover:text-stone-600 font-bold p-2 touch-target"
               >
                 {t(locale, "hide")}
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Clinical treatment details */}
               <div className="flex flex-col gap-4">
                 <div>
                   <label className="text-xs font-heading font-bold text-stone-700 block mb-1">{t(locale, "language")}</label>
@@ -267,7 +326,7 @@ export default function App() {
                   <label className="text-xs font-heading font-bold text-stone-700 block mb-1">{t(locale, "clinicalTreatment")}</label>
                   <select
                     value={preferences.clinicalTreatment}
-                    onChange={(e) => handleUpdatePreferences({ clinicalTreatment: e.target.value as any })}
+                    onChange={(e) => handleUpdatePreferences({ clinicalTreatment: e.target.value as ClinicalTreatment })}
                     className="w-full text-xs p-2.5 outline-none border border-stone-200 rounded-xl bg-stone-50 font-bold cursor-pointer focus:border-pink-300 focus:bg-white transition-all"
                   >
                     <option value="none">{t(locale, "treatmentNone")}</option>
@@ -280,7 +339,7 @@ export default function App() {
                   <label className="text-xs font-heading font-bold text-stone-700 block mb-1">{t(locale, "dietStyle")}</label>
                   <select
                     value={preferences.dietType}
-                    onChange={(e) => handleUpdatePreferences({ dietType: e.target.value as any })}
+                    onChange={(e) => handleUpdatePreferences({ dietType: e.target.value as DietType })}
                     className="w-full text-xs p-2.5 outline-none border border-stone-200 rounded-xl bg-stone-50 font-bold cursor-pointer focus:border-pink-300 focus:bg-white transition-all"
                   >
                     <option value="none">{t(locale, "dietNone")}</option>
@@ -320,7 +379,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Exclusion lists */}
               <div className="flex flex-col gap-4">
                 <div>
                   <label className="text-xs font-heading font-bold text-stone-700 block mb-1">{t(locale, "waterGoal")}</label>
@@ -376,33 +434,26 @@ export default function App() {
           locale={locale}
         />
 
-        {/* GRID LAYOUT FOR CORE UTILITIES */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* LEFT COLUMN: Trackers and sensors */}
           <div className="flex flex-col gap-6">
             
-            {/* Feature 5: Hydration */}
-            <HydrationTracker dailyGoal={preferences.dailyWaterGoal} />
+            <HydrationTracker dailyGoal={preferences.dailyWaterGoal} userId={userId} />
 
-            {/* Feature 2: Nausea and clinical symptoms */}
-            <SymptomTracker />
+            <SymptomTracker userId={userId} />
 
-            {/* Feature 6: Weight and BMI Tracker */}
             <WeightTracker 
               clinicalTreatment={preferences.clinicalTreatment} 
               dietType={preferences.dietType} 
+              userId={userId}
             />
 
-            {/* Feature 4: Ozempic/Mounjaro injection monitor with visual Body Map */}
-            <MounjaroMonitor treatmentType={preferences.clinicalTreatment} />
+            <MounjaroMonitor treatmentType={preferences.clinicalTreatment} userId={userId} />
 
           </div>
 
-          {/* RIGHT COLUMN: Pantries and scanners */}
           <div className="flex flex-col gap-6">
             
-            {/* Feature 3: Scanner, product checking, computerized vision simulated dropzones */}
             <PantryScanner 
               onSuggestRecipes={handleSuggestRecipes}
               onUpdatePreferences={(updates) => {
@@ -416,14 +467,21 @@ export default function App() {
                 });
               }}
               currentRestrictions={preferences.clinicalRestrictions}
+              userId={userId}
+              isPremium={paywall.isPremium}
+              locale={locale}
+              onShowPaywall={() => setShowSubscriptionPlans(true)}
             />
 
-            {/* Feature 1 & Exporter: Meal planners, checklists and medical CSV files */}
             <MealPlanner 
               preferences={preferences}
               pantry={pantry}
               externalRecipes={externalRecipes}
               onClearExternalRecipes={() => setExternalRecipes(null)}
+              userId={userId}
+              isPremium={paywall.isPremium}
+              locale={locale}
+              onShowPaywall={() => setShowSubscriptionPlans(true)}
             />
 
           </div>
@@ -432,13 +490,11 @@ export default function App() {
 
       </main>
 
-      {/* Footer credits and standalone app standalone indicators */}
       <footer className="text-center py-6 mt-12 text-[10px] text-stone-400 font-bold border-t border-stone-100 flex flex-col items-center gap-1.5 max-w-sm mx-auto p-4 leading-normal">
-        <div>PersonalDiet — Protocolo de Inteligência Clínica Nutricional</div>
-        <div className="bg-stone-100 px-2 py-0.5 rounded text-stone-500 border border-stone-200/40">v2.1.0-pwa (Estabilidade Total)</div>
+        <div>PersonalDiet — Seu Organizador Pessoal de Receitas e Dietas</div>
+        <div className="bg-stone-100 px-2 py-0.5 rounded text-stone-500 border border-stone-200/40">v3.0.0-pwa (Economia & Inteligência)</div>
       </footer>
 
-      {/* PWA banner to slide-up */}
       <InstallPwaBanner />
 
       <WhoAmI 
@@ -448,7 +504,46 @@ export default function App() {
         onClose={() => setShowWhoAmI(false)}
       />
 
-      {/* Vercel Web Analytics */}
+      {showSubscriptionPlans && (
+        <SubscriptionPlans
+          userId={userId}
+          locale={locale}
+          onClose={() => setShowSubscriptionPlans(false)}
+          currentStatus={paywall.status}
+        />
+      )}
+
+      {showSubscriptionManager && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl border border-pink-100 flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up">
+            <div className="p-4 border-b border-stone-50 flex items-center justify-between">
+              <h2 className="text-base font-extrabold text-stone-800 font-heading">
+                {t(locale, "manageSubscription")}
+              </h2>
+              <button
+                onClick={() => setShowSubscriptionManager(false)}
+                className="p-2 rounded-full hover:bg-stone-50 text-stone-400 hover:text-stone-600 transition-colors touch-target"
+                aria-label="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <SubscriptionManager
+                status={paywall.status}
+                trialEndsAt={paywall.trialEndsAt}
+                plan={paywall.plan}
+                locale={locale}
+                onOpenPlans={() => {
+                  setShowSubscriptionManager(false);
+                  setShowSubscriptionPlans(true);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <Analytics />
     </div>
   );

@@ -1,31 +1,41 @@
 import { useState, useEffect, FormEvent } from "react";
-import { Search, Plus, Trash2, Camera, FileText, AlertTriangle, ShieldCheck, CheckCircle2, RefreshCw, Upload, Sparkles, Check, Heart, X, CheckSquare, Square, Eye, Edit2 } from "lucide-react";
-import { PantryIngredient, ClinicalRestriction, ReminderSettings } from "../types";
+import { Plus, Trash2, Camera, FileText, AlertTriangle, ShieldCheck, RefreshCw, Upload, X, CheckSquare, Square } from "lucide-react";
+import { PantryIngredient, ClinicalRestriction, ReminderSettings, DietType, ClinicalTreatment, Locale } from "../types";
+import { authFetch } from "../authFetch";
+import { fetchPantryItems, upsertPantryItems } from "../dataHooks";
+import { useRealtimeSync } from "../hooks/useRealtimeSync";
+import { toast } from "sonner";
+import PaywallOverlay from "./PaywallOverlay";
 
 interface PantryScannerProps {
   onSuggestRecipes: (pantryItems: PantryIngredient[]) => void;
   onUpdatePreferences: (updates: {
-    dietType: any;
-    clinicalRestrictions: any[];
+    dietType: DietType;
+    clinicalRestrictions: ClinicalRestriction[];
     dailyWaterGoal?: number;
-    clinicalTreatment?: any;
+    clinicalTreatment?: ClinicalTreatment;
     prescriptionMealIntervalHours?: number;
     reminders?: ReminderSettings;
   }) => void;
   currentRestrictions: ClinicalRestriction[];
+  userId: string;
+  isPremium: boolean;
+  locale: Locale;
+  onShowPaywall: () => void;
 }
 
-export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, currentRestrictions }: PantryScannerProps) {
+export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, currentRestrictions: _currentRestrictions, userId, isPremium, locale, onShowPaywall }: PantryScannerProps) {
   const [activeTab, setActiveTab] = useState<"inventory" | "vision" | "pdf" | "labels">("inventory");
   const [ingredients, setIngredients] = useState<PantryIngredient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [paywallFeature, setPaywallFeature] = useState<string | null>(null);
   
   // Manual Ingredient Form
   const [manName, setManName] = useState("");
   const [manQty, setManQty] = useState("");
-  const [manCategory, setManCategory] = useState("Proteínas");
+  const [manCategory, _setManCategory] = useState("Proteínas");
 
   // UPGRADED Vision Multi-Carousel State
-  // 3 slots of fridge, 3 slots of pantry
   const [fridgePhotos, setFridgePhotos] = useState<(string | null)[]>([null, null, null]);
   const [pantryPhotos, setPantryPhotos] = useState<(string | null)[]>([null, null, null]);
   const [activePhotoCategory, setActivePhotoCategory] = useState<"fridge" | "pantry">("fridge");
@@ -36,38 +46,60 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
   // PDF Simulator
   const [pdfFile, setPdfFile] = useState<string | null>(null);
   const [isPdfParsing, setIsPdfParsing] = useState(false);
-  const [parsedPrescription, setParsedPrescription] = useState<any | null>(null);
+  const [parsedPrescription, setParsedPrescription] = useState<Record<string, unknown> | null>(null);
 
   // Label Scanner
   const [labelText, setLabelText] = useState("");
   const [allergenType, setAllergenType] = useState<"celiac" | "lactose">("celiac");
   const [isLabelAnalyzing, setIsLabelAnalyzing] = useState(false);
-  const [labelResult, setLabelResult] = useState<any | null>(null);
+  const [labelResult, setLabelResult] = useState<Record<string, unknown> | null>(null);
+
+  const handleTabChange = (tab: "inventory" | "vision" | "pdf" | "labels") => {
+    if (tab === "inventory") {
+      setActiveTab(tab);
+      return;
+    }
+    if (!isPremium) {
+      const featureMap: Record<string, string> = {
+        vision: "Escaner de despensa",
+        pdf: "Leitura de prescrições",
+        labels: "Análise de rótulos",
+      };
+      setPaywallFeature(featureMap[tab] ?? "Recurso Premium");
+      return;
+    }
+    setActiveTab(tab);
+  };
 
   useEffect(() => {
-    const saved = localStorage.getItem("nutri_pantry_items");
-    if (saved) {
-      try {
-        setIngredients(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
+    let cancelled = false;
+    setLoading(true);
+    fetchPantryItems(userId).then((data) => {
+      if (cancelled) return;
+      if (data.length === 0) {
+        const defaults: PantryIngredient[] = [
+          { id: "1", name: "Ovos Orgânicos", quantity: "6 unidades", category: "Proteínas" },
+          { id: "2", name: "Peito de Frango", quantity: "400g", category: "Proteínas" },
+          { id: "3", name: "Brócolis Fresco", quantity: "1 maço", category: "Legumes" },
+          { id: "4", name: "Azeite de Oliva", quantity: "1 garrafa", category: "Condimentos" }
+        ];
+        setIngredients(defaults);
+        upsertPantryItems(userId, defaults).catch(() => {});
+      } else {
+        setIngredients(data);
       }
-    } else {
-      // Default initial pantry
-      const defaults: PantryIngredient[] = [
-        { id: "1", name: "Ovos Orgânicos", quantity: "6 unidades", category: "Proteínas" },
-        { id: "2", name: "Peito de Frango", quantity: "400g", category: "Proteínas" },
-        { id: "3", name: "Brócolis Fresco", quantity: "1 maço", category: "Legumes" },
-        { id: "4", name: "Azeite de Oliva", quantity: "1 garrafa", category: "Condimentos" }
-      ];
-      setIngredients(defaults);
-      localStorage.setItem("nutri_pantry_items", JSON.stringify(defaults));
-    }
-  }, []);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  useRealtimeSync(userId, () => {
+    upsertPantryItems(userId, ingredients).catch(() => {});
+  });
 
   const saveInventory = (latest: PantryIngredient[]) => {
     setIngredients(latest);
-    localStorage.setItem("nutri_pantry_items", JSON.stringify(latest));
+    upsertPantryItems(userId, latest).catch(() => {});
   };
 
   const handleManualAdd = (e: FormEvent) => {
@@ -98,17 +130,16 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
     }
   };
 
-  // Preset unsplash simulation sources
   const photoLibrary = {
     fridge: [
-      "https://images.unsplash.com/photo-1571175452283-bc241517565e?w=400&q=80", // fruit jar shelves
-      "https://images.unsplash.com/photo-1590794056226-79ef3a8147e1?w=400&q=80", // crisper vegetables
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80"  // glass prep bowls
+      "https://images.unsplash.com/photo-1571175452283-bc241517565e?w=400&q=80",
+      "https://images.unsplash.com/photo-1590794056226-79ef3a8147e1?w=400&q=80",
+      "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80"
     ],
     pantry: [
-      "https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=400&q=80", // grains/oils
-      "https://images.unsplash.com/photo-1588854337115-1c67d9247e4d?w=400&q=80", // avocados baskets
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&q=80"  // oats/chocolate
+      "https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=400&q=80",
+      "https://images.unsplash.com/photo-1588854337115-1c67d9247e4d?w=400&q=80",
+      "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&q=80"
     ]
   };
 
@@ -138,12 +169,10 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
     setVisionDetectedItems([]);
   };
 
-  // Vision Computer Multi-Image processing simulator
   const handleScanPhotos = async () => {
-    // Count active photo files
     const totalPhotos = [...fridgePhotos, ...pantryPhotos].filter(p => p !== null).length;
     if (totalPhotos === 0) {
-      alert("Por favor adicione pelo menos uma foto de geladeira ou dispensa para iniciar análise!");
+      toast.error("Por favor adicione pelo menos uma foto de geladeira ou dispensa para iniciar análise!");
       return;
     }
 
@@ -151,7 +180,7 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
     setVisionDetectedItems([]);
 
     try {
-      const response = await fetch("/api/gemini/analyze-pantry-image", {
+      const response = await authFetch("/api/gemini/analyze-pantry-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: "carousel-multi-base64-data", totalPhotos }),
@@ -159,17 +188,16 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
       const data = await response.json();
       
       if (data.detectedIngredients) {
-        // Enforce checklist checkbox selection state (all verified true by default, editable in client UI)
-        const parsed = data.detectedIngredients.map((item: any) => ({
+        const parsed = data.detectedIngredients.map((item: Record<string, unknown>) => ({
           ...item,
           id: Math.random().toString(36).substring(2, 9),
           checked: true,
         }));
         setVisionDetectedItems(parsed);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao conectar à API de visao inteligente do Gemini.");
+    } catch (err: unknown) {
+      console.error(err instanceof Error ? err.message : String(err));
+      toast.error("Erro ao conectar à API de visão inteligente do Gemini.");
     } finally {
       setIsVisionScanning(false);
     }
@@ -190,11 +218,10 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
   const handleConfirmVisionItems = () => {
     const selected = visionDetectedItems.filter(item => item.checked);
     if (selected.length === 0) {
-      alert("Selecione pelo menos um alimento no formulário de confirmação!");
+      toast.warning("Selecione pelo menos um alimento no formulário de confirmação!");
       return;
     }
 
-    // Clean client identifiers and add
     const mapped = selected.map(item => ({
       id: item.id,
       name: item.name,
@@ -205,30 +232,28 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
     const updated = [...ingredients, ...mapped];
     saveInventory(updated);
     
-    // Clear vision scanner drawer after success
     setVisionDetectedItems([]);
     setFridgePhotos([null, null, null]);
     setPantryPhotos([null, null, null]);
     setActiveTab("inventory");
-    alert(`Sucesso! ${mapped.length} ingredientes confirmados e adicionados com segurança ao seu estoque.`);
+    toast.success(`Sucesso! ${mapped.length} ingredientes confirmados e adicionados com segurança ao seu estoque.`);
   };
 
-  // PDF Doctor Prescription Simulation Trigger
   const handlePdfSimulate = async () => {
     setIsPdfParsing(true);
     setPdfFile("prescricao_nutricional.pdf");
     setParsedPrescription(null);
 
     try {
-      const response = await fetch("/api/gemini/parse-prescription", {
+      const response = await authFetch("/api/gemini/parse-prescription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: "prescricao.pdf", fileContent: "mock-base-64" }),
       });
       const data = await response.json();
       setParsedPrescription(data);
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      console.error(err instanceof Error ? err.message : String(err));
     } finally {
       setIsPdfParsing(false);
     }
@@ -238,30 +263,29 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
     if (!parsedPrescription) return;
 
     onUpdatePreferences({
-      dietType: parsedPrescription.detectedDiet,
-      clinicalRestrictions: parsedPrescription.detectedRestrictions,
-      dailyWaterGoal: parsedPrescription.waterGoalMl,
-      clinicalTreatment: parsedPrescription.clinicalTreatment,
-      prescriptionMealIntervalHours: parsedPrescription.mealIntervalHours || 3,
+      dietType: parsedPrescription.detectedDiet as DietType,
+      clinicalRestrictions: parsedPrescription.detectedRestrictions as ClinicalRestriction[],
+      dailyWaterGoal: parsedPrescription.waterGoalMl as number,
+      clinicalTreatment: parsedPrescription.clinicalTreatment as ClinicalTreatment,
+      prescriptionMealIntervalHours: parsedPrescription.mealIntervalHours as number || 3,
       reminders: {
         hydrationEnabled: true,
         hydrationIntervalMinutes: 120,
         mealEnabled: true,
-        mealIntervalHours: parsedPrescription.mealIntervalHours || 3,
+        mealIntervalHours: parsedPrescription.mealIntervalHours as number || 3,
         activeStart: "08:00",
         activeEnd: "21:00",
       },
     });
 
-    alert("As diretrizes nutricionais extraídas do PDF foram aplicadas com sucesso em suas preferências de perfil!");
+    toast.success("As diretrizes nutricionais extraídas do PDF foram aplicadas com sucesso em suas preferências de perfil!");
     setParsedPrescription(null);
     setPdfFile(null);
   };
 
-  // Allergen Label Scan Trigger
   const handleAnalyzeLabel = async () => {
     if (!labelText.trim()) {
-      alert("Por favor insira os ingredientes do rótulo para escanear!");
+      toast.warning("Por favor insira os ingredientes do rótulo para escanear!");
       return;
     }
 
@@ -269,27 +293,34 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
     setLabelResult(null);
 
     try {
-      const response = await fetch("/api/gemini/analyze-labels", {
+      const response = await authFetch("/api/gemini/analyze-labels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ labelText, restrictionType: allergenType }),
       });
       const data = await response.json();
       setLabelResult(data);
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      console.error(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLabelAnalyzing(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 flex flex-col gap-6">
+        <div className="text-center py-8 text-xs text-stone-400">Carregando despensa...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 flex flex-col gap-6">
       
-      {/* Sub tabs configuration */}
       <div className="flex border-b border-stone-100 overflow-x-auto gap-2 pb-1.5 scrollbar-none">
         <button
-          onClick={() => setActiveTab("inventory")}
+          onClick={() => handleTabChange("inventory")}
           className={`px-4 py-2 text-xs font-heading font-extrabold whitespace-nowrap rounded-lg transition-all ${
             activeTab === "inventory" ? "bg-pink-50 text-pink-500" : "text-stone-500 hover:text-stone-700"
           }`}
@@ -297,7 +328,7 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
           Sua Geladeira ({ingredients.length})
         </button>
         <button
-          onClick={() => setActiveTab("vision")}
+          onClick={() => handleTabChange("vision")}
           className={`px-4 py-2 text-xs font-heading font-extrabold whitespace-nowrap rounded-lg transition-all ${
             activeTab === "vision" ? "bg-pink-50 text-pink-500" : "text-stone-500 hover:text-stone-700"
           }`}
@@ -305,7 +336,7 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
           Fotos Despensa & Geladeira (IA)
         </button>
         <button
-          onClick={() => setActiveTab("pdf")}
+          onClick={() => handleTabChange("pdf")}
           className={`px-4 py-2 text-xs font-heading font-extrabold whitespace-nowrap rounded-lg transition-all ${
             activeTab === "pdf" ? "bg-pink-50 text-pink-500" : "text-stone-500 hover:text-stone-700"
           }`}
@@ -313,7 +344,7 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
           Ler PDF Prescrição
         </button>
         <button
-          onClick={() => setActiveTab("labels")}
+          onClick={() => handleTabChange("labels")}
           className={`px-4 py-2 text-xs font-heading font-extrabold whitespace-nowrap rounded-lg transition-all ${
             activeTab === "labels" ? "bg-pink-50 text-pink-500" : "text-stone-500 hover:text-stone-700"
           }`}
@@ -322,18 +353,17 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
         </button>
       </div>
 
-      {/* Screen 1: Inventory panel */}
       {activeTab === "inventory" && (
         <div className="flex flex-col gap-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-heading font-extrabold text-stone-800 text-sm">O que você tem em casa?</h3>
-              <p className="text-[11px] text-stone-400">Insira ingredientes ou use as fotos com Inteligência Artificial para escanear</p>
+              <h3 className="font-heading font-extrabold text-stone-800 text-sm">O que tem na sua Geladeira?</h3>
+              <p className="text-[11px] text-stone-400">Insira o que você já tem em casa para economizar e não precisar ir ao mercado.</p>
             </div>
             {ingredients.length > 0 && (
               <button 
                 onClick={clearPantry}
-                className="text-stone-400 hover:text-red-500 text-xs font-semibold"
+                className="text-stone-400 hover:text-red-500 text-xs font-semibold p-2 touch-target"
               >
                 Limpar Todos
               </button>
@@ -363,7 +393,6 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
             </button>
           </form>
 
-          {/* List ingredients in visual grid cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
             {ingredients.length === 0 ? (
               <div className="col-span-full text-center py-6 bg-stone-50 rounded-2xl">
@@ -379,7 +408,9 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
                   </div>
                   <button 
                     onClick={() => handleDeleteItem(item.id)}
-                    className="p-1 rounded text-stone-300 hover:text-red-500 transition-colors"
+                    className="p-2 rounded text-stone-300 hover:text-red-500 transition-colors touch-target"
+                    title="Remover"
+                    aria-label={`Remover ${item.name}`}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -388,27 +419,24 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
             )}
           </div>
 
-          {/* Recipe suggestion based on fridge ingredients trigger */}
           {ingredients.length > 0 && (
             <button
               onClick={() => onSuggestRecipes(ingredients)}
               className="w-full mt-2 py-3 bg-gradient-to-r from-pink-500 to-purple-500 hover:opacity-90 text-white font-bold text-center rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md shadow-pink-100 btn-interactive"
             >
-              <Sparkles className="w-4 h-4" /> Sugerir 3 Receitas com meus ingredientes (IA)
+              <Camera className="w-4 h-4" /> Sugerir 3 Receitas com meus ingredientes (IA)
             </button>
           )}
         </div>
       )}
 
-      {/* Upgraded Screen 2: Multi-Vision Carousel */}
       {activeTab === "vision" && (
         <div className="flex flex-col gap-5">
           <div>
-            <h3 className="font-heading font-extrabold text-stone-800 text-sm">Escaneamento por Fotos Clínico</h3>
-            <p className="text-[11px] text-stone-400">Suba até 3 fotos da Geladeira e 3 fotos da Despensa (Dispensa). O Gemini detectará todos os alimentos!</p>
+            <h3 className="font-heading font-extrabold text-stone-800 text-sm">Escanear Despensa para Economizar</h3>
+            <p className="text-[11px] text-stone-400">Suba fotos da sua geladeira. A IA vai descobrir o que dá pra cozinhar sem precisar gastar no supermercado!</p>
           </div>
 
-          {/* Category Toggle selector */}
           <div className="flex gap-2 p-1 bg-stone-100 rounded-xl">
             <button
               onClick={() => setActivePhotoCategory("fridge")}
@@ -428,7 +456,6 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
             </button>
           </div>
 
-          {/* Images Grid Slots for selected category */}
           <div className="grid grid-cols-3 gap-3">
             {[0, 1, 2].map((idx) => {
               const currentPhotos = activePhotoCategory === "fridge" ? fridgePhotos : pantryPhotos;
@@ -441,8 +468,9 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
                       <img src={photo} alt="Slot da cozinha" className="w-full h-full object-cover" />
                       <button
                         onClick={() => handleRemovePhotoSlot(activePhotoCategory, idx)}
-                        className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-md"
+                        className="absolute top-1 right-1 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-md touch-target"
                         title="Remover foto"
+                        aria-label="Remover foto"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -465,7 +493,6 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
             })}
           </div>
 
-          {/* Prompt action trigger */}
           {visionDetectedItems.length === 0 && (
             <button
               onClick={handleScanPhotos}
@@ -477,7 +504,6 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
             </button>
           )}
 
-          {/* CONFIRMAÇÃO DA IDENTIFICAÇÃO TABLE DRAWER */}
           {visionDetectedItems.length > 0 && (
             <div className="bg-gradient-to-tr from-pink-500/5 to-purple-500/5 border border-pink-100 rounded-2xl p-4 flex flex-col gap-4">
               <div className="flex items-center justify-between border-b border-pink-100/60 pb-2">
@@ -488,16 +514,23 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
                 <span className="text-[9px] bg-pink-500 text-white font-bold px-2 py-0.5 rounded-full uppercase">IA Ativa</span>
               </div>
 
-              {/* Verified food items review list with inputs */}
               <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                 {visionDetectedItems.map((item) => (
                   <div key={item.id} className="flex gap-2 items-center bg-white border border-stone-100 p-2 rounded-xl text-xs hover:border-pink-300 transition-all">
                     
-                    {/* Checkbox */}
                     <button
                       type="button"
                       onClick={() => handleToggleCheckItem(item.id)}
-                      className="p-1 rounded text-stone-400 transition-colors"
+                      role="checkbox"
+                      aria-checked={item.checked}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleToggleCheckItem(item.id);
+                        }
+                      }}
+                      className="p-2 rounded text-stone-400 transition-colors touch-target"
                     >
                       {item.checked ? (
                         <CheckSquare className="w-4 h-4 text-pink-500" />
@@ -506,7 +539,6 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
                       )}
                     </button>
 
-                    {/* Edit fields directly in table cells */}
                     <div className="flex-1 min-w-0 grid grid-cols-2 gap-1.5">
                       <div>
                         <span className="text-[8px] text-stone-400 uppercase font-semibold leading-none">Alimento</span>
@@ -534,7 +566,6 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
                 ))}
               </div>
 
-              {/* Save or Cancel */}
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -556,7 +587,6 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
         </div>
       )}
 
-      {/* Screen 3: PDF Prescriptions Dropzone */}
       {activeTab === "pdf" && (
         <div className="flex flex-col gap-5">
           <div>
@@ -592,7 +622,6 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
             )}
           </div>
 
-          {/* Confirm results */}
           {parsedPrescription && (
             <div className="bg-purple-50/50 border border-purple-100 rounded-2xl p-4 flex flex-col gap-3">
               <h4 className="text-xs font-heading font-bold text-purple-700">Informações Extraídas da Prescrição</h4>
@@ -600,26 +629,26 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="p-2 bg-white rounded-lg border border-purple-100/50">
                   <span className="text-stone-400 block font-semibold text-[9px] uppercase">Dieta Sugerida</span>
-                  <span className="font-bold text-stone-700 capitalize">{parsedPrescription.detectedDiet}</span>
+                  <span className="font-bold text-stone-700 capitalize">{String(parsedPrescription.detectedDiet)}</span>
                 </div>
                 <div className="p-2 bg-white rounded-lg border border-purple-100/50">
                   <span className="text-stone-400 block font-semibold text-[9px] uppercase">Meta de Água</span>
-                  <span className="font-bold text-stone-700">{parsedPrescription.waterGoalMl} ml / dia</span>
+                  <span className="font-bold text-stone-700">{String(parsedPrescription.waterGoalMl)} ml / dia</span>
                 </div>
                 <div className="p-2 bg-white rounded-lg border border-purple-100/50">
                   <span className="text-stone-400 block font-semibold text-[9px] uppercase">Restrições Clínicas</span>
                   <span className="font-bold text-stone-700 capitalize">
-                    {parsedPrescription.detectedRestrictions.join(", ") || "Nenhuma"}
+                    {Array.isArray(parsedPrescription.detectedRestrictions) ? parsedPrescription.detectedRestrictions.join(", ") : "Nenhuma"}
                   </span>
                 </div>
                 <div className="p-2 bg-white rounded-lg border border-purple-100/50">
                   <span className="text-stone-400 block font-semibold text-[9px] uppercase">Uso de Peptídeo GLP-1</span>
-                  <span className="font-bold text-stone-700 capitalize">{parsedPrescription.clinicalTreatment || "Nenhum"}</span>
+                  <span className="font-bold text-stone-700 capitalize">{String(parsedPrescription.clinicalTreatment || "Nenhum")}</span>
                 </div>
               </div>
 
               <div className="p-3 bg-white rounded-xl border border-purple-100 text-[10px] text-stone-600 leading-relaxed italic">
-                "{parsedPrescription.doctorNotes}"
+                "{String(parsedPrescription.doctorNotes)}"
               </div>
 
               <button
@@ -633,7 +662,6 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
         </div>
       )}
 
-      {/* Screen 4: Allergen labels checker */}
       {activeTab === "labels" && (
         <div className="flex flex-col gap-4">
           <div>
@@ -707,27 +735,38 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
                 {labelResult.isSafe ? (
                   <>
                     <ShieldCheck className="w-5 h-5 text-green-600" />
-                    Ingredientes 100% Livres de Riscos ({labelResult.riskLevel})!
+                    Ingredientes 100% Livres de Riscos ({String(labelResult.riskLevel)})!
                   </>
                 ) : (
                   <>
                     <AlertTriangle className="w-5 h-5 text-red-600" />
-                    SUBSTÂNCIA PROIBIDA IDENTIFICADA ({labelResult.riskLevel})!
+                    SUBSTÂNCIA PROIBIDA IDENTIFICADA ({String(labelResult.riskLevel)})!
                   </>
                 )}
               </div>
               
               <p className="text-[11px] font-semibold">
-                {labelResult.explanation}
+                {String(labelResult.explanation)}
               </p>
               {!labelResult.isSafe && (
                 <div className="text-[10px] bg-red-100 text-red-700 p-1 px-2 rounded-lg font-bold w-fit uppercase">
-                  Elemento nocivo: {labelResult.triggerIngredient}
+                  Elemento nocivo: {String(labelResult.triggerIngredient)}
                 </div>
               )}
             </div>
           )}
         </div>
+      )}
+      {paywallFeature && (
+        <PaywallOverlay
+          featureName={paywallFeature}
+          locale={locale}
+          onSubscribe={() => {
+            setPaywallFeature(null);
+            onShowPaywall();
+          }}
+          onClose={() => setPaywallFeature(null)}
+        />
       )}
     </div>
   );

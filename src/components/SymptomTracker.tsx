@@ -1,27 +1,41 @@
 import { useState, useEffect } from "react";
-import { AlertCircle, Plus, Sparkles, Activity, Trash2, Calendar } from "lucide-react";
+import { Plus, Activity, Trash2, Calendar } from "lucide-react";
 import { SymptomLog } from "../types";
+import { fetchSymptomLogs, upsertSymptomLog } from "../dataHooks";
+import { useRealtimeSync } from "../hooks/useRealtimeSync";
+import { toast } from "sonner";
 
 const ALL_SYMPTOMS = ["Náusea", "Azia / Refluxo", "Fadiga / Fraqueza", "Dor de Cabeça", "Prisão de Ventre", "Diarreia", "Má Digestão"];
 const ALL_TRIGGERS = ["Refeição de alto teor de gorduras", "Alimentos muito doces", "Ingestão rápida de comida", "Pouca água no dia", "Dia seguinte à injeção", "Nenhum trigger identificado"];
 
-export default function SymptomTracker() {
+interface SymptomTrackerProps {
+  userId: string;
+}
+
+export default function SymptomTracker({ userId }: SymptomTrackerProps) {
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [intensity, setIntensity] = useState(5);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem("nutri_symptom_logs");
-    if (saved) {
-      try {
-        setLogs(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
+    let cancelled = false;
+    setLoading(true);
+    fetchSymptomLogs(userId).then((data) => {
+      if (cancelled) return;
+      setLogs(data);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  useRealtimeSync(userId, () => {
+    if (logs.length > 0) {
+      upsertSymptomLog(userId, logs[0]).catch(() => {});
     }
-  }, []);
+  });
 
   const toggleSymptom = (sym: string) => {
     setSelectedSymptoms(prev =>
@@ -37,7 +51,7 @@ export default function SymptomTracker() {
 
   const saveLog = () => {
     if (selectedSymptoms.length === 0) {
-      alert("Por favor, selecione pelo menos 1 sintoma!");
+      toast.warning("Por favor, selecione pelo menos 1 sintoma!");
       return;
     }
 
@@ -51,7 +65,7 @@ export default function SymptomTracker() {
 
     const updated = [newLog, ...logs];
     setLogs(updated);
-    localStorage.setItem("nutri_symptom_logs", JSON.stringify(updated));
+    upsertSymptomLog(userId, newLog).catch(() => {});
 
     // Reset Form
     setSelectedSymptoms([]);
@@ -67,7 +81,6 @@ export default function SymptomTracker() {
   const deleteLog = (id: string) => {
     const updated = logs.filter(l => l.id !== id);
     setLogs(updated);
-    localStorage.setItem("nutri_symptom_logs", JSON.stringify(updated));
   };
 
   // Intensity indicators style
@@ -76,6 +89,23 @@ export default function SymptomTracker() {
     if (lvl <= 7) return { bg: "bg-amber-50 text-amber-700 border-amber-100", label: "Moderado" };
     return { bg: "bg-rose-50 text-rose-700 border-rose-100", label: "Intenso" };
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 flex flex-col gap-6">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-purple-50 text-purple-500 rounded-2xl">
+            <Activity className="w-6 h-6 animate-pulse" />
+          </div>
+          <div>
+            <h3 className="text-lg font-heading font-extrabold text-stone-800">Rastreador de Sintomas & Náuseas</h3>
+            <p className="text-xs text-stone-500">Mapeie reações digestivas ou sintomas induzidos por medicações</p>
+          </div>
+        </div>
+        <div className="text-center py-8 text-xs text-stone-400">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 flex flex-col gap-6">
@@ -204,7 +234,9 @@ export default function SymptomTracker() {
                       </span>
                       <button 
                         onClick={() => deleteLog(log.id)}
-                        className="text-stone-300 hover:text-red-500 rounded p-1 transition-colors"
+                        className="text-stone-300 hover:text-red-500 rounded p-2 transition-colors touch-target"
+                        title="Remover"
+                        aria-label="Remover registro"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

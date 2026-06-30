@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
-import { Droplet, Plus, Trash2, Award, Sparkles } from "lucide-react";
+import { Droplet, Trash2, Award } from "lucide-react";
 import { HydrationLog } from "../types";
+import { fetchHydrationLogs, upsertHydrationLog } from "../dataHooks";
+import { useRealtimeSync } from "../hooks/useRealtimeSync";
 
 interface HydrationTrackerProps {
   dailyGoal: number;
+  userId: string;
 }
 
-export default function HydrationTracker({ dailyGoal }: HydrationTrackerProps) {
+export default function HydrationTracker({ dailyGoal, userId }: HydrationTrackerProps) {
   const [logs, setLogs] = useState<HydrationLog[]>([]);
   const [todayIntake, setTodayIntake] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   // Get current date string in local format YYYY-MM-DD
   const getTodayDateString = () => {
@@ -16,28 +20,24 @@ export default function HydrationTracker({ dailyGoal }: HydrationTrackerProps) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
 
+  // Load from Supabase
   useEffect(() => {
-    const saved = localStorage.getItem("nutri_hydration_logs");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as HydrationLog[];
-        setLogs(parsed);
+    let cancelled = false;
+    setLoading(true);
+    fetchHydrationLogs(userId).then((data) => {
+      if (cancelled) return;
+      setLogs(data);
+      const today = getTodayDateString();
+      const sum = data
+        .filter(log => log.date === today)
+        .reduce((total, log) => total + log.amount, 0);
+      setTodayIntake(sum);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
 
-        const today = getTodayDateString();
-        const sum = parsed
-          .filter(log => log.date === today)
-          .reduce((total, log) => total + log.amount, 0);
-        setTodayIntake(sum);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  }, []);
-
-  const saveLogs = (newLogs: HydrationLog[]) => {
-    setLogs(newLogs);
-    localStorage.setItem("nutri_hydration_logs", JSON.stringify(newLogs));
-
+  const computeToday = (newLogs: HydrationLog[]) => {
     const today = getTodayDateString();
     const sum = newLogs
       .filter(log => log.date === today)
@@ -45,21 +45,78 @@ export default function HydrationTracker({ dailyGoal }: HydrationTrackerProps) {
     setTodayIntake(sum);
   };
 
+  const saveLogs = (newLogs: HydrationLog[]) => {
+    setLogs(newLogs);
+    computeToday(newLogs);
+    // Sync current today's log to Supabase
+    const today = getTodayDateString();
+    const todayLog = newLogs.find(l => l.date === today);
+    if (todayLog) {
+      upsertHydrationLog(userId, todayLog).catch(() => {});
+    }
+  };
+
+  // Real-time sync: periodically upsert the current today log
+  useRealtimeSync(userId, () => {
+    const today = getTodayDateString();
+    const currentLog = logs.find(l => l.date === today);
+    if (currentLog) {
+      upsertHydrationLog(userId, currentLog).catch(() => {});
+    }
+  });
+
   const addWater = (amount: number) => {
-    const newLog: HydrationLog = {
-      id: Math.random().toString(36).substring(2, 9),
-      date: getTodayDateString(),
-      amount,
-    };
-    saveLogs([newLog, ...logs]);
+    const today = getTodayDateString();
+    const existingToday = logs.find(l => l.date === today);
+    let newLogs: HydrationLog[];
+    if (existingToday) {
+      const updated: HydrationLog = {
+        ...existingToday,
+        amount: existingToday.amount + amount,
+      };
+      newLogs = [updated, ...logs.filter(l => l.id !== existingToday.id)];
+    } else {
+      const newLog: HydrationLog = {
+        id: Math.random().toString(36).substring(2, 9),
+        date: today,
+        amount,
+      };
+      newLogs = [newLog, ...logs];
+    }
+    saveLogs(newLogs);
   };
 
   const deleteLog = (id: string) => {
     const updated = logs.filter(l => l.id !== id);
-    saveLogs(updated);
+    setLogs(updated);
+    computeToday(updated);
+    const today = getTodayDateString();
+    const todayLog = updated.find(l => l.date === today);
+    if (todayLog) {
+      upsertHydrationLog(userId, todayLog).catch(() => {});
+    }
   };
 
   const percentage = Math.min(100, Math.floor((todayIntake / dailyGoal) * 100));
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-blue-50 text-blue-500 rounded-2xl">
+              <Droplet className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-lg font-heading font-extrabold text-stone-800">Hidratação Metabólica</h3>
+              <p className="text-xs text-stone-500">Aumente a ingestão hídrica para ajudar o fígado e rins</p>
+            </div>
+          </div>
+        </div>
+        <div className="text-center py-8 text-xs text-stone-400">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 flex flex-col gap-6">
@@ -177,7 +234,9 @@ export default function HydrationTracker({ dailyGoal }: HydrationTrackerProps) {
                 </div>
                 <button 
                   onClick={() => deleteLog(log.id)}
-                  className="text-stone-300 hover:text-red-500 p-1 rounded-md transition-colors"
+                  className="text-stone-300 hover:text-red-500 p-2 rounded-md transition-colors touch-target"
+                  title="Remover"
+                  aria-label="Remover registro"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

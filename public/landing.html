@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>PersonalDiet — Nutrição Inteligente para Quem Tem Restrições</title>
+  <meta name="description" content="Cardápios clínicos personalizados com IA. Para quem usa Ozempic, Mounjaro, é celíaco, intolerante à lactose ou segue low-carb." />
+  
+  <!-- Open Graph / Meta Tags -->
+  <meta property="og:title" content="PersonalDiet — Cardápios Clínicos Inteligentes" />
+  <meta property="og:description" content="IA que gera seu cardápio semanal respeitando suas restrições alimentares e tratamento médico." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://personaldiet.vercel.app" />
+  <meta property="og:image" content="https://personaldiet.vercel.app/og-image.png" />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-primary: #fafaf9;
+      --bg-white: #ffffff;
+      --text-primary: #1c1917;
+      --text-secondary: #78716c;
+      --text-muted: #a8a29e;
+      --pink-400: #f472b6;
+      --pink-500: #ec4899;
+      --pink-600: #db2777;
+      --purple-400: #c084fc;
+      --purple-500: #a855f7;
+      --stone-100: #f5f5f4;
+      --stone-200: #e7e5e4;
+      --stone-300: #d6d3d1;
+      --stone-400: #a8a29e;
+      --stone-500: #78716c;
+      --stone-600: #57534e;
+      --stone-800: #292524;
+      --red-50: #fef2f2;
+      --red-100: #fee2e2;
+      --red-500: #ef4444;
+      --amber-50: #fffbeb;
+      --amber-100: #fef3c7;
+      --amber-600: #d97706;
+      --green-50: #f0fdf4;
+      --green-500: #22c55e;
+      --green-600: #16a34a;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Nunito', 'Quicksand', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    
+    .font-heading { font-family: 'Quicksand', sans-serif; font-weight: 700; }
+    .font-body { font-family: 'Nunito', sans-serif; }
+    
+    /* Gradients */
+    .gradient-bg { background: linear-gradient(135deg, var(--pink-400), var(--purple-500)); }
+    .gradient-text { background: linear-gradient(135deg, var(--pink-500), var(--purple-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gradient-border { border: 2px solid transparent; background: linear-gradient(var(--bg-white), var(--bg-white)) padding-box, linear-gradient(135deg, var(--pink-400), var(--purple-500)) border-box; }
+    
+    /* Buttons */
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 1rem 2rem; border-radius: 1rem; font-weight: 800; font-size: 1rem;
+      color: white; text-decoration: none; border: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--pink-500), var(--purple-500));
+      box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35);
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(236, 72, 153, 0.45); }
+    .btn-primary:active { transform: translateY(0); }
+    
+    .btn-secondary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 1rem 2rem; border-radius: 1rem; font-weight: 700; font-size: 1rem;
+      color: var(--stone-600); text-decoration: none; border: 1.5px solid var(--stone-200);
+      background: white; cursor: pointer; transition: all 0.2s ease;
+    }
+    .btn-secondary:hover { border-color: var(--pink-400); color: var(--pink-600); }
+    
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-weight: 700; font-size: 0.875rem;
+      color: var(--stone-500); text-decoration: none; border: none;
+      background: transparent; cursor: pointer; transition: all 0.2s ease;
+    }
+    .btn-ghost:hover { color: var(--pink-500); background: var(--pink-50); }
+    
+    /* Cards */
+    .card {
+      background: white; border-radius: 1.5rem; padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+      border: 1px solid var(--stone-100);
+      transition: all 0.3s ease;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+    
+    .card-premium {
+      background: white; border-radius: 1.5rem; padding: 2rem;
+      box-shadow: 0 4px 20px rgba(236, 72, 153, 0.12);
+      border: 2px solid var(--pink-400);
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .card-premium:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(236, 72, 153, 0.18); }
+    
+    /* Badge */
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.375rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .badge-pink { background: var(--pink-50); color: var(--pink-600); border: 1px solid var(--pink-100); }
+    .badge-green { background: var(--green-50); color: var(--green-600); border: 1px solid #bbf7d0; }
+    .badge-amber { background: var(--amber-50); color: var(--amber-600); border: 1px solid var(--amber-100); }
+    .badge-gradient { background: linear-gradient(135deg, var(--pink-500), var(--purple-500)); color: white; }
+    
+    /* Feature icon */
+    .feature-icon {
+      width: 3rem; height: 3rem; border-radius: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--pink-50), var(--purple-50));
+      color: var(--pink-500);
+    }
+    
+    /* Phone mockup */
+    .phone-mockup {
+      width: 280px; height: 560px; border-radius: 2.5rem;
+      background: var(--stone-800); border: 12px solid var(--stone-800);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15), 0 0 0 1px var(--stone-200);
+      overflow: hidden; position: relative;
+    }
+    .phone-mockup::before {
+      content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 28px; background: var(--stone-800); border-radius: 0 0 1rem 1rem; z-index: 10;
+    }
+    .phone-screen {
+      width: 100%; height: 100%; background: var(--bg-primary); border-radius: 1.5rem;
+      overflow: hidden; display: flex; flex-direction: column;
+    }
+    
+    /* FAQ */
+    .faq-item { border-bottom: 1px solid var(--stone-100); }
+    .faq-question {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1.25rem 0; cursor: pointer; font-weight: 700; color: var(--stone-800);
+      background: none; border: none; width: 100%; text-align: left; font-size: 1rem;
+      font-family: 'Nunito', sans-serif;
+    }
+    .faq-answer {
+      max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease;
+      color: var(--text-secondary); font-size: 0.9375rem; line-height: 1.7;
+    }
+    .faq-answer.open { max-height: 500px; padding-bottom: 1.25rem; }
+    .faq-icon { transition: transform 0.3s ease; color: var(--stone-400); }
+    .faq-icon.open { transform: rotate(180deg); color: var(--pink-500); }
+    
+    /* Disclaimer */
+    .disclaimer {
+      font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;
+      border-top: 1px solid var(--stone-200); padding-top: 1.5rem; margin-top: 2rem;
+    }
+    
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeInUp 0.6s ease forwards; opacity: 0; }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .float { animation: float 6s ease-in-out infinite; }
+    
+    /* Container */
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 1.5rem; }
+    
+    /* Sections */
+    section { padding: 5rem 0; }
+    @media (max-width: 640px) { section { padding: 3rem 0; } }
+    
+    /* Checkmark */
+    .check { color: var(--green-500); flex-shrink: 0; }
+    .xmark { color: var(--stone-300); flex-shrink: 0; }
+    
+    /* Hero gradient bg */
+    .hero-gradient {
+      background: radial-gradient(ellipse at 50% 0%, rgba(244, 114, 182, 0.08) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 50%, rgba(192, 132, 252, 0.05) 0%, transparent 50%);
+    }
+    
+    /* Price tag */
+    .price { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+    .price-small { font-size: 1rem; font-weight: 600; color: var(--text-muted); }
+    
+    /* Header sticky */
+    header {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(250, 250, 249, 0.85); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--stone-100);
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--stone-100); }
+    ::-webkit-scrollbar-thumb { background: var(--stone-300); border-radius: 3px; }
+    
+    /* Smooth scroll */
+    html { scroll-behavior: smooth; }
+    
+    /* Focus */
+    a:focus-visible, button:focus-visible { outline: 2px solid var(--pink-400); outline-offset: 2px; border-radius: 0.5rem; }
+    
+    /* Mobile */
+    @media (max-width: 640px) {
+      .price { font-size: 2rem; }
+      .card, .card-premium { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="container" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div style="width: 2.25rem; height: 2.25rem; border-radius: 0.75rem; background: linear-gradient(135deg, var(--pink-400), var(--purple-400)); display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 2px 8px rgba(244, 114, 182, 0.3);">
+          <i data-lucide="heart" style="width: 1.25rem; height: 1.25rem; fill: white;"></i>
+        </div>
+        <div>
+          <span class="font-heading" style="font-size: 1.125rem; font-weight: 800; color: var(--stone-800); line-height: 1;">PersonalDiet</span>
+          <span style="font-size: 0.625rem; font-weight: 700; color: var(--stone-400); text-transform: uppercase; letter-spacing: 0.08em; display: block;">Cardápios Clínicos</span>
+        </div>
+      </div>
+      <a href="/" class="btn-primary" style="padding: 0.625rem 1.25rem; font-size: 0.875rem; border-radius: 0.75rem;">
+        <i data-lucide="smartphone" style="width: 1rem; height: 1rem;"></i>
+        Acessar App
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero-gradient" style="padding-top: 4rem; padding-bottom: 4rem;">
+    <div class="container">
+      <div style="display: grid; grid-template-columns: 1fr; gap: 3rem; align-items: center;">
+        
+        <!-- Text -->
+        <div style="text-align: center; max-width: 640px; margin: 0 auto;">
+          <div class="animate-in" style="margin-bottom: 1.5rem;">
+            <span class="badge badge-pink">
+              <i data-lucide="sparkles" style="width: 0.875rem; height: 0.875rem;"></i>
+              Nutrição com Inteligência Artificial
+            </span>
+          </div>
+          
+          <h1 class="font-heading animate-in delay-1" style="font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 800; line-height: 1.1; color: var(--stone-800); margin-bottom: 1.25rem;">
+            O único app de nutrição que entende o seu <span class="gradient-text">tratamento</span>
+          </h1>
+          
+          <p class="animate-in delay-2" style="font-size: clamp(1rem, 2.5vw, 1.125rem); color: var(--text-secondary); max-width: 520px; margin: 0 auto 2rem; line-height: 1.7;">
+            Cardápios semanais personalizados com IA. Escaneie sua geladeira, leia prescrições médicas e rastreie seus sintomas — tudo respeitando suas restrições alimentares.
+          </p>
+          
+          <div class="animate-in delay-3" style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-bottom: 2.5rem;">
+            <a href="/" class="btn-primary" style="font-size: 1.125rem; padding: 1.125rem 2.5rem;">
+              <i data-lucide="zap" style="width: 1.25rem; height: 1.25rem;"></i>
+              Começar 7 dias grátis
+            </a>
+            <a href="#como-funciona" class="btn-secondary" style="font-size: 1.125rem; padding: 1.125rem 2.5rem;">
+              <i data-lucide="play-circle" style="width: 1.25rem; height: 1.25rem;"></i>
+              Ver como funciona
+            </a>
+          </div>
+          
+          <div class="animate-in delay-4" style="display: flex; align-items: center; justify-content: center; gap: 2rem; flex-wrap: wrap; font-size: 0.875rem; color: var(--text-muted);">
+            <span style="display: flex; align-items: center; gap: 0.375rem;"><i data-lucide="check-circle" style="width: 1rem; height: 1rem; color: var(--green-500);"></i> Sem cartão de crédito</span>
+            <span style="display: flex; align-items: center; gap: 0.375rem;"><i data-lucide="check-circle" style="width: 1rem; height: 1rem; color: var(--green-500);"></i> Cancele quando quiser</span>
+            <span style="display: flex; align-items: center; gap: 0.375rem;"><i data-lucide="check-circle" style="width: 1rem; height: 1rem; color: var(--green-500);"></i> Feito no Brasil</span>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+  <!-- Social Proof / Stats -->
+  <section style="background: white; padding: 2.5rem 0; border-top: 1px solid var(--stone-100); border-bottom: 1px solid var(--stone-100);">
+    <div class="container">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 2rem; text-align: center;">
+        <div>
+          <div class="font-heading" style="font-size: 2rem; font-weight: 800; color: var(--pink-500);">500+</div>
+          <div style="font-size: 0.875rem; color: var(--text-muted); font-weight: 600;">Cardápios gerados</div>
+        </div>
+        <div>
+          <div class="font-heading" style="font-size: 2rem; font-weight: 800; color: var(--purple-500);">4.8</div>
+          <div style="font-size: 0.875rem; color: var(--text-muted); font-weight: 600;">Nota média (App Store)</div>
+        </div>
+        <div>
+          <div class="font-heading" style="font-size: 2rem; font-weight: 800; color: var(--pink-500);">15k+</div>
+          <div style="font-size: 0.875rem; color: var(--text-muted); font-weight: 600;">Usuários ativos</div>
+        </div>
+        <div>
+          <div class="font-heading" style="font-size: 2rem; font-weight: 800; color: var(--purple-500);">98%</div>
+          <div style="font-size: 0.875rem; color: var(--text-muted); font-weight: 600;">Recomendam para amigos</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Como Funciona -->
+  <section id="como-funciona">
+    <div class="container">
+      <div style="text-align: center; max-width: 560px; margin: 0 auto 3.5rem;">
+        <span class="badge badge-pink" style="margin-bottom: 1rem; display: inline-flex;">
+          <i data-lucide="layers" style="width: 0.875rem; height: 0.875rem;"></i>
+          Como Funciona
+        </span>
+        <h2 class="font-heading" style="font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 800; color: var(--stone-800); line-height: 1.2;">
+          Em 3 minutos você tem seu cardápio da semana
+        </h2>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        
+        <div class="card" style="text-align: center;">
+          <div style="width: 4rem; height: 4rem; border-radius: 1.25rem; background: linear-gradient(135deg, var(--pink-50), var(--purple-50)); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; color: var(--pink-500);">
+            <i data-lucide="user" style="width: 1.75rem; height: 1.75rem;"></i>
+          </div>
+          <h3 class="font-heading" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--stone-800);">1. Conte quem você é</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9375rem; line-height: 1.7;">Informe suas restrições (lactose, glúten), tratamento (Ozempic, Mounjaro) e ingredientes que não gosta.</p>
+        </div>
+        
+        <div class="card" style="text-align: center;">
+          <div style="width: 4rem; height: 4rem; border-radius: 1.25rem; background: linear-gradient(135deg, var(--pink-50), var(--purple-50)); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; color: var(--purple-500);">
+            <i data-lucide="camera" style="width: 1.75rem; height: 1.75rem;"></i>
+          </div>
+          <h3 class="font-heading" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--stone-800);">2. Escaneie sua geladeira</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9375rem; line-height: 1.7;">Tire uma foto da sua despensa. A IA identifica o que você tem e cria receitas sem precisar ir ao mercado.</p>
+        </div>
+        
+        <div class="card" style="text-align: center;">
+          <div style="width: 4rem; height: 4rem; border-radius: 1.25rem; background: linear-gradient(135deg, var(--pink-50), var(--purple-50)); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; color: var(--pink-500);">
+            <i data-lucide="calendar-days" style="width: 1.75rem; height: 1.75rem;"></i>
+          </div>
+          <h3 class="font-heading" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--stone-800);">3. Receba seu cardápio</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9375rem; line-height: 1.7;">Cardápio semanal completo com café, almoço, lanche e jantar. Lista de compras automática inclusa.</p>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section style="background: white;">
+    <div class="container">
+      <div style="text-align: center; max-width: 560px; margin: 0 auto 3.5rem;">
+        <span class="badge badge-pink" style="margin-bottom: 1rem; display: inline-flex;">
+          <i data-lucide="wand-2" style="width: 0.875rem; height: 0.875rem;"></i>
+          Recursos
+        </span>
+        <h2 class="font-heading" style="font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 800; color: var(--stone-800); line-height: 1.2;">
+          Tudo o que seu nutricionista faria, no seu bolso
+        </h2>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+        
+        <div class="card" style="display: flex; gap: 1.25rem; align-items: flex-start;">
+          <div class="feature-icon" style="flex-shrink: 0;">
+            <i data-lucide="brain-circuit" style="width: 1.25rem; height: 1.25rem;"></i>
+          </div>
+          <div>
+            <h3 class="font-heading" style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.375rem; color: var(--stone-800);">IA que entende seu tratamento</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">Se você usa Ozempic ou Mounjaro, a IA gera receitas leves, ricas em proteína e de fácil digestão — respeitando a gastroparesia.</p>
+          </div>
+        </div>
+        
+        <div class="card" style="display: flex; gap: 1.25rem; align-items: flex-start;">
+          <div class="feature-icon" style="flex-shrink: 0; background: linear-gradient(135deg, var(--purple-50), var(--pink-50)); color: var(--purple-500);">
+            <i data-lucide="scan-line" style="width: 1.25rem; height: 1.25rem;"></i>
+          </div>
+          <div>
+            <h3 class="font-heading" style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.375rem; color: var(--stone-800);">Scanner de despensa & geladeira</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">Tire uma foto e a IA identifica seus ingredientes. Ela cria receitas usando o que você já tem — economizando dinheiro e evitando desperdício.</p>
+          </div>
+        </div>
+        
+        <div class="card" style="display: flex; gap: 1.25rem; align-items: flex-start;">
+          <div class="feature-icon" style="flex-shrink: 0;">
+            <i data-lucide="file-text" style="width: 1.25rem; height: 1.25rem;"></i>
+          </div>
+          <div>
+            <h3 class="font-heading" style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.375rem; color: var(--stone-800);">Leitura de prescrições médicas</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">Envie o PDF da sua receita médica. O app extrai automaticamente as restrições e cria um cardápio personalizado.</p>
+          </div>
+        </div>
+        
+        <div class="card" style="display: flex; gap: 1.25rem; align-items: flex-start;">
+          <div class="feature-icon" style="flex-shrink: 0; background: linear-gradient(135deg, var(--purple-50), var(--pink-50)); color: var(--purple-500);">
+            <i data-lucide="shield-check" style="width: 1.25rem; height: 1.25rem;"></i>
+          </div>
+          <div>
+            <h3 class="font-heading" style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.375rem; color: var(--stone-800);">Filtro de alérgenos inteligente</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">Celíaca? Intolerante à lactose? O app identifica automaticamente alérgenos em rótulos e alerta sobre riscos.</p>
+          </div>
+        </div>
+        
+        <div class="card" style="display: flex; gap: 1.25rem; align-items: flex-start;">
+          <div class="feature-icon" style="flex-shrink: 0;">
+            <i data-lucide="droplets" style="width: 1.25rem; height: 1.25rem;"></i>
+          </div>
+          <div>
+            <h3 class="font-heading" style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.375rem; color: var(--stone-800);">Rastreio de hidratação & sintomas</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">Acompanhe sua meta de água diária, registre náuseas e sintomas, e veja padrões ao longo do tempo.</p>
+          </div>
+        </div>
+        
+        <div class="card" style="display: flex; gap: 1.25rem; align-items: flex-start;">
+          <div class="feature-icon" style="flex-shrink: 0; background: linear-gradient(135deg, var(--purple-50), var(--pink-50)); color: var(--purple-500);">
+            <i data-lucide="shopping-cart" style="width: 1.25rem; height: 1.25rem;"></i>
+          </div>
+          <div>
+            <h3 class="font-heading" style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.375rem; color: var(--stone-800);">Lista de compras automática</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">A partir do cardápio gerado, o app monta sua lista de compras com quantidades exatas. Leva para o mercado e risca o que já pegou.</p>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonial -->
+  <section>
+    <div class="container">
+      <div class="card" style="max-width: 720px; margin: 0 auto; text-align: center; position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, var(--pink-100), var(--purple-100)); opacity: 0.5;"></div>
+        <div style="position: absolute; bottom: -30px; left: -30px; width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--purple-100), var(--pink-100)); opacity: 0.4;"></div>
+        
+        <div style="position: relative; z-index: 1;">
+          <i data-lucide="quote" style="width: 2rem; height: 2rem; color: var(--pink-300); margin: 0 auto 1.5rem;"></i>
+          <p style="font-size: clamp(1.125rem, 3vw, 1.375rem); color: var(--stone-700); font-weight: 600; line-height: 1.7; font-style: italic; margin-bottom: 1.5rem;">
+            "Comecei o Ozempic e não fazia ideia do que comer. O PersonalDiet me deu segurança nas primeiras semanas — receitas que não me deixam com náusea e que eu realmente consigo fazer."
+          </p>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+            <div style="width: 3rem; height: 3rem; border-radius: 50%; background: linear-gradient(135deg, var(--pink-300), var(--purple-300)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 1.125rem;">M</div>
+            <div style="text-align: left;">
+              <div style="font-weight: 700; color: var(--stone-800); font-size: 0.9375rem;">Mariana, 42 anos</div>
+              <div style="font-size: 0.8125rem; color: var(--text-muted);">Usuária de Ozempic — São Paulo, SP</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="precos" style="background: white;">
+    <div class="container">
+      <div style="text-align: center; max-width: 560px; margin: 0 auto 3.5rem;">
+        <span class="badge badge-green" style="margin-bottom: 1rem; display: inline-flex;">
+          <i data-lucide="gift" style="width: 0.875rem; height: 0.875rem;"></i>
+          7 dias grátis em todos os planos
+        </span>
+        <h2 class="font-heading" style="font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 800; color: var(--stone-800); line-height: 1.2;">
+          Escolha o plano ideal para você
+        </h2>
+        <p style="color: var(--text-secondary); margin-top: 0.75rem; font-size: 1.0625rem;">Cancele quando quiser. Sem taxa de cancelamento. Sem letras miúdas.</p>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; max-width: 960px; margin: 0 auto; align-items: start;">
+        
+        <!-- Free -->
+        <div class="card" style="padding: 2rem;">
+          <div style="margin-bottom: 1.5rem;">
+            <span class="badge badge-amber" style="margin-bottom: 0.75rem; display: inline-flex;">Free</span>
+            <div class="price" style="color: var(--stone-800); margin-bottom: 0.25rem;">R$ 0</div>
+            <div class="price-small">Para sempre</div>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem; font-size: 0.9375rem; color: var(--stone-600);">
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Rastreio de peso e IMC</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Hidratação diária</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> 3 cardápios por mês</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> 5 escaneamentos de rótulo</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="x" class="xmark" style="width: 1.125rem; height: 1.125rem;"></i> <span style="color: var(--text-muted);">Cardápios ilimitados</span></span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="x" class="xmark" style="width: 1.125rem; height: 1.125rem;"></i> <span style="color: var(--text-muted);">Scanner de despensa</span></span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="x" class="xmark" style="width: 1.125rem; height: 1.125rem;"></i> <span style="color: var(--text-muted);">Leitura de prescrições</span></span>
+          </div>
+          
+          <a href="/" class="btn-secondary" style="width: 100%; justify-content: center;">
+            Usar de graça
+          </a>
+        </div>
+        
+        <!-- Mensal -->
+        <div class="card" style="padding: 2rem;">
+          <div style="margin-bottom: 1.5rem;">
+            <span class="badge badge-pink" style="margin-bottom: 0.75rem; display: inline-flex;">Premium Mensal</span>
+            <div class="price" style="color: var(--stone-800); margin-bottom: 0.25rem;">R$ 19,90</div>
+            <div class="price-small">por mês — menos de R$ 0,70 por dia</div>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem; font-size: 0.9375rem; color: var(--stone-600);">
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Tudo do Free</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Cardápios ilimitados</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Scanner de despensa IA</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Leitura de prescrições</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Scanner de alérgenos ilimitado</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Lista de compras automática</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Rastreio de sintomas</span>
+          </div>
+          
+          <a href="/" class="btn-primary" style="width: 100%; justify-content: center;">
+            <i data-lucide="zap" style="width: 1.125rem; height: 1.125rem;"></i>
+            Começar 7 dias grátis
+          </a>
+        </div>
+        
+        <!-- Anual -->
+        <div class="card-premium" style="padding: 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <span class="badge badge-gradient">Premium Anual</span>
+            <span class="badge badge-pink" style="background: var(--pink-100); color: var(--pink-700);">Economize 25%</span>
+          </div>
+          
+          <div style="margin-bottom: 1.5rem;">
+            <div class="price" style="color: var(--stone-800); margin-bottom: 0.25rem;">R$ 149,90</div>
+            <div class="price-small">por ano — equivale a R$ 12,49/mês</div>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem; font-size: 0.9375rem; color: var(--stone-600);">
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Tudo do Premium Mensal</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> 2 meses de desconto</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Suporte prioritário</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Acesso antecipado a novidades</span>
+            <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Cancele quando quiser</span>
+          </div>
+          
+          <a href="/" class="btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--pink-600), var(--purple-600)); box-shadow: 0 4px 14px rgba(219, 39, 119, 0.4);">
+            <i data-lucide="crown" style="width: 1.125rem; height: 1.125rem;"></i>
+            Começar 7 dias grátis
+          </a>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="container">
+      <div style="text-align: center; max-width: 560px; margin: 0 auto 3rem;">
+        <span class="badge badge-pink" style="margin-bottom: 1rem; display: inline-flex;">
+          <i data-lucide="help-circle" style="width: 0.875rem; height: 0.875rem;"></i>
+          Dúvidas
+        </span>
+        <h2 class="font-heading" style="font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 800; color: var(--stone-800); line-height: 1.2;">
+          Perguntas frequentes
+        </h2>
+      </div>
+      
+      <div style="max-width: 720px; margin: 0 auto;">
+        
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            <span>O PersonalDiet substitui um nutricionista?</span>
+            <i data-lucide="chevron-down" class="faq-icon" style="width: 1.25rem; height: 1.25rem;"></i>
+          </button>
+          <div class="faq-answer">
+            Não. O PersonalDiet é uma ferramenta de apoio. Ela ajuda a organizar sua alimentação com base nas suas restrições e tratamento, mas não substitui a orientação de um profissional de saúde qualificado. Sempre consulte um médico ou nutricionista antes de iniciar qualquer dieta.
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            <span>Preciso de cartão de crédito para o trial?</span>
+            <i data-lucide="chevron-down" class="faq-icon" style="width: 1.25rem; height: 1.25rem;"></i>
+          </button>
+          <div class="faq-answer">
+            Não. Os 7 dias de trial são 100% gratuitos e não exigem cartão de crédito. Você só precisa criar uma conta. Quando o trial acabar, você pode escolher o plano que preferir ou continuar no Free.
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            <span>Como funciona o scanner de despensa?</span>
+            <i data-lucide="chevron-down" class="faq-icon" style="width: 1.25rem; height: 1.25rem;"></i>
+          </button>
+          <div class="faq-answer">
+            Você tira uma foto da sua geladeira ou despensa. A inteligência artificial identifica os ingredientes visíveis e sugere receitas usando o que você já tem. O objetivo é economizar dinheiro e evitar que comida estrague na geladeira.
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            <span>Meus dados de saúde estão seguros?</span>
+            <i data-lucide="chevron-down" class="faq-icon" style="width: 1.25rem; height: 1.25rem;"></i>
+          </button>
+          <div class="faq-answer">
+            Sim. Seus dados são armazenados no Supabase com criptografia e Row Level Security (RLS) — cada usuário só acessa seus próprios dados. Estamos em conformidade com a LGPD. Não vendemos seus dados para terceiros.
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            <span>Posso cancelar a assinatura?</span>
+            <i data-lucide="chevron-down" class="faq-icon" style="width: 1.25rem; height: 1.25rem;"></i>
+          </button>
+          <div class="faq-answer">
+            Sim, a qualquer momento. No plano mensal, você pode cancelar antes da próxima cobrança. No plano anual, o cancelamento entra em vigor no final do período pago. Não há taxa de cancelamento.
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Final -->
+  <section style="background: linear-gradient(135deg, rgba(244, 114, 182, 0.06), rgba(192, 132, 252, 0.06)); text-align: center;">
+    <div class="container">
+      <div style="max-width: 560px; margin: 0 auto;">
+        <h2 class="font-heading" style="font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 800; color: var(--stone-800); line-height: 1.2; margin-bottom: 1rem;">
+          Pronto para cuidar da sua alimentação com inteligência?
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 1.125rem; margin-bottom: 2rem; line-height: 1.7;">
+          7 dias grátis. Sem cartão. Sem compromisso. Experimente todas as funcionalidades Premium e veja a diferença na sua rotina.
+        </p>
+        <a href="/" class="btn-primary" style="font-size: 1.25rem; padding: 1.25rem 3rem; margin-bottom: 1rem;">
+          <i data-lucide="zap" style="width: 1.25rem; height: 1.25rem;"></i>
+          Começar meu trial grátis
+        </a>
+        <p style="font-size: 0.8125rem; color: var(--text-muted);">
+          <i data-lucide="shield-check" style="width: 0.875rem; height: 0.875rem; display: inline; vertical-align: middle;"></i>
+          Dados criptografados. Conformidade LGPD.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="background: white; border-top: 1px solid var(--stone-100); padding: 3rem 0 2rem;">
+    <div class="container">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
+        
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 2.25rem; height: 2.25rem; border-radius: 0.75rem; background: linear-gradient(135deg, var(--pink-400), var(--purple-400)); display: flex; align-items: center; justify-content: center; color: white;">
+            <i data-lucide="heart" style="width: 1.25rem; height: 1.25rem; fill: white;"></i>
+          </div>
+          <span class="font-heading" style="font-size: 1.125rem; font-weight: 800; color: var(--stone-800);">PersonalDiet</span>
+        </div>
+        
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center;">
+          <a href="/" class="btn-ghost" style="font-size: 0.875rem;">Acessar App</a>
+          <a href="#precos" class="btn-ghost" style="font-size: 0.875rem;">Preços</a>
+          <a href="#faq" class="btn-ghost" style="font-size: 0.875rem;">Dúvidas</a>
+          <a href="#" class="btn-ghost" style="font-size: 0.875rem;" onclick="alert('Em breve!'); return false;">Contato</a>
+        </div>
+        
+        <div class="disclaimer" style="text-align: center; max-width: 640px; width: 100%;">
+          <p style="margin-bottom: 0.75rem;">
+            <strong>Disclaimer:</strong> O PersonalDiet é uma ferramenta de apoio à organização alimentar e não substitui a orientação de médicos, nutricionistas ou outros profissionais de saúde qualificados. Sempre consulte um profissional antes de iniciar qualquer dieta, tratamento ou mudança na sua rotina alimentar. O app não fornece diagnóstico médico, prescrição de medicamentos ou aconselhamento nutricional personalizado.
+          </p>
+          <p>
+            © 2026 PersonalDiet. Todos os direitos reservados. | 
+            <a href="#" style="color: var(--text-muted); text-decoration: underline;" onclick="alert('Em breve!'); return false;">Política de Privacidade</a> | 
+            <a href="#" style="color: var(--text-muted); text-decoration: underline;" onclick="alert('Em breve!'); return false;">Termos de Uso</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+    
+    // FAQ Toggle
+    function toggleFaq(button) {
+      const answer = button.nextElementSibling;
+      const icon = button.querySelector('.faq-icon');
+      answer.classList.toggle('open');
+      icon.classList.toggle('open');
+    }
+    
+    // Open first FAQ by default
+    document.addEventListener('DOMContentLoaded', function() {
+      const firstFaq = document.querySelector('.faq-question');
+      if (firstFaq) toggleFaq(firstFaq);
+    });
+  </script>
+  
+  <!-- Pixel Meta (placeholder — substituir pelo seu quando criar) -->
+  <!-- 
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window,document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', 'SEU_PIXEL_ID');
+    fbq('track', 'PageView');
+  </script>
+  -->
+</body>
+</html>

@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
-import { Syringe, Calendar, Plus, Trash2, MapPin, Sparkles } from "lucide-react";
+import { Syringe, Plus, Trash2, MapPin } from "lucide-react";
 import { DoseLog, ClinicalTreatment } from "../types";
+import { fetchDoseLogs, upsertDoseLog } from "../dataHooks";
+import { useRealtimeSync } from "../hooks/useRealtimeSync";
+import { toast } from "sonner";
 
 interface MounjaroMonitorProps {
   treatmentType: ClinicalTreatment;
+  userId: string;
 }
 
 const INJECTION_SITES = [
@@ -15,26 +19,32 @@ const INJECTION_SITES = [
   { id: "braco-direito", label: "Braço Direito", category: "Braços" },
 ];
 
-export default function MounjaroMonitor({ treatmentType }: MounjaroMonitorProps) {
+export default function MounjaroMonitor({ treatmentType, userId }: MounjaroMonitorProps) {
   const [logs, setLogs] = useState<DoseLog[]>([]);
   const [doseMg, setDoseMg] = useState(2.5);
   const [selectedSite, setSelectedSite] = useState<string>("esquerda-abdomen");
   const [customDate, setCustomDate] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Current date
     const today = new Date().toISOString().split("T")[0];
     setCustomDate(today);
 
-    const saved = localStorage.getItem("nutri_dose_logs");
-    if (saved) {
-      try {
-        setLogs(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
+    let cancelled = false;
+    setLoading(true);
+    fetchDoseLogs(userId).then((data) => {
+      if (cancelled) return;
+      setLogs(data);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  useRealtimeSync(userId, () => {
+    if (logs.length > 0) {
+      upsertDoseLog(userId, logs[0]).catch(() => {});
     }
-  }, []);
+  });
 
   if (treatmentType === "none") {
     return (
@@ -50,7 +60,7 @@ export default function MounjaroMonitor({ treatmentType }: MounjaroMonitorProps)
 
   const handleAddDose = () => {
     if (!doseMg || doseMg <= 0) {
-      alert("Por favor insira uma dose válida!");
+      toast.warning("Por favor insira uma dose válida!");
       return;
     }
 
@@ -59,26 +69,41 @@ export default function MounjaroMonitor({ treatmentType }: MounjaroMonitorProps)
       id: Math.random().toString(36).substring(2, 9),
       date: customDate || new Date().toISOString().split("T")[0],
       doseMg,
-      injectionSite: selectedSite as any,
+      injectionSite: selectedSite as DoseLog['injectionSite'],
       treatmentType,
     };
 
     const updated = [newLog, ...logs];
     setLogs(updated);
-    localStorage.setItem("nutri_dose_logs", JSON.stringify(updated));
-    alert(`Dose de ${doseMg}mg registrada em [${matchedSite?.label}] com sucesso! Lembre-se de alternar a posição na próxima aplicação.`);
+    upsertDoseLog(userId, newLog).catch(() => {});
+    toast.success(`Dose de ${doseMg}mg registrada em [${matchedSite?.label}] com sucesso! Lembre-se de alternar a posição na próxima aplicação.`);
   };
 
   const handleDeleteDose = (id: string) => {
     const updated = logs.filter(l => l.id !== id);
     setLogs(updated);
-    localStorage.setItem("nutri_dose_logs", JSON.stringify(updated));
   };
 
-  // Predefined suggestion doses based on treatment type
   const suggestionDoses = treatmentType === "mounjaro" 
     ? [2.5, 5.0, 7.5, 10.0, 12.5, 15.0]
     : [0.25, 0.50, 1.0, 2.0];
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 flex flex-col gap-6">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-pink-50 text-pink-500 rounded-2xl">
+            <Syringe className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-heading font-extrabold text-stone-800 capitalize">Monitor Diário: {treatmentType}</h3>
+            <p className="text-xs text-stone-500">Mapeamento anatômico rotacional para maior conforto de aplicação</p>
+          </div>
+        </div>
+        <div className="text-center py-8 text-xs text-stone-400">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 flex flex-col gap-6">
@@ -93,20 +118,16 @@ export default function MounjaroMonitor({ treatmentType }: MounjaroMonitorProps)
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Visual Map Grid */}
         <div className="border border-stone-100 bg-stone-50/50 p-4 rounded-2xl flex flex-col items-center">
           <h4 className="text-xs font-heading font-bold text-stone-600 mb-4 text-center">
             Clique no Mapa para Selecionar o Local de Aplicação
           </h4>
           
-          {/* Simple Body Silhouette with targets mapped */}
           <div className="relative w-44 h-64 bg-stone-100/50 rounded-full border border-stone-200/40 flex flex-col p-4 justify-between overflow-hidden">
-            {/* Minimal SVG representation for injection sites */}
             <div className="text-[10px] text-center text-stone-400 absolute w-full top-1 left-0 font-bold uppercase tracking-widest">
               Esquema Corporal
             </div>
 
-            {/* Arms */}
             <div className="flex justify-between w-full absolute top-[75px] left-0 px-2">
               <button 
                 onClick={() => setSelectedSite("braco-esquerdo")}
@@ -132,7 +153,6 @@ export default function MounjaroMonitor({ treatmentType }: MounjaroMonitorProps)
               </button>
             </div>
 
-            {/* Abdominals */}
             <div className="flex justify-center gap-6 w-full absolute top-[115px] left-0">
               <button 
                 onClick={() => setSelectedSite("esquerda-abdomen")}
@@ -158,7 +178,6 @@ export default function MounjaroMonitor({ treatmentType }: MounjaroMonitorProps)
               </button>
             </div>
 
-            {/* Thighs */}
             <div className="flex justify-center gap-7 w-full absolute bottom-[45px] left-0">
               <button 
                 onClick={() => setSelectedSite("coxa-esquerda")}
@@ -193,7 +212,6 @@ export default function MounjaroMonitor({ treatmentType }: MounjaroMonitorProps)
           </div>
         </div>
 
-        {/* Form panel */}
         <div className="flex flex-col gap-4">
           <div>
             <label className="text-xs font-heading font-bold text-stone-700 block mb-1">Dose da Medicação (mg)</label>
@@ -244,7 +262,6 @@ export default function MounjaroMonitor({ treatmentType }: MounjaroMonitorProps)
         </div>
       </div>
 
-      {/* History dose Table */}
       <div>
         <h4 className="text-xs font-heading font-semibold text-stone-500 uppercase tracking-wider mb-2">Histórico de Rodízio de Doses</h4>
         <div className="max-h-56 overflow-y-auto border border-stone-100/70 rounded-2xl overflow-hidden shadow-sm">
@@ -279,7 +296,9 @@ export default function MounjaroMonitor({ treatmentType }: MounjaroMonitorProps)
                       <td className="p-3 text-center">
                         <button
                           onClick={() => handleDeleteDose(log.id)}
-                          className="text-stone-300 hover:text-red-500 p-1 rounded-md transition-colors inline-block"
+                          className="text-stone-300 hover:text-red-500 p-2 rounded-md transition-colors inline-block touch-target"
+                          title="Remover dose"
+                          aria-label="Remover dose"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

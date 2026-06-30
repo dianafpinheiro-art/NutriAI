@@ -1,5 +1,5 @@
-import { useState, useEffect, FormEvent } from "react";
-import { User, Activity, Flame, ShieldAlert, Sliders, Sparkles, Check, HelpCircle, X, Info, Plus } from "lucide-react";
+import { useState, useEffect, useRef, FormEvent } from "react";
+import { User, Check, X, Info, Plus } from "lucide-react";
 import { UserPreferences, DietType, ClinicalRestriction, ClinicalTreatment } from "../types";
 
 interface WhoAmIProps {
@@ -19,6 +19,10 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
   
   const [newExcluded, setNewExcluded] = useState("");
 
+  const modalRef = useRef<HTMLDivElement>(null);
+  const firstFocusableRef = useRef<HTMLInputElement>(null);
+  const lastFocusableRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     if (isOpen) {
       setUserName(preferences.userName || "");
@@ -27,8 +31,47 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
       setClinicalRestrictions(preferences.clinicalRestrictions || []);
       setDailyWaterGoal(preferences.dailyWaterGoal || 2500);
       setExcludedIngredients(preferences.excludedIngredients || []);
+      // Focus first element after modal opens
+      setTimeout(() => {
+        firstFocusableRef.current?.focus();
+      }, 50);
     }
   }, [isOpen, preferences]);
+
+  // Focus trap + Esc handler
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (onClose) onClose();
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusableElements || focusableElements.length === 0) return;
+        const first = focusableElements[0];
+        const last = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -38,16 +81,6 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
     } else {
       setClinicalRestrictions([...clinicalRestrictions, restr]);
     }
-  };
-
-  const handleAddExcluded = (e: FormEvent) => {
-    e.preventDefault();
-    if (!newExcluded.trim()) return;
-    const clean = newExcluded.trim().toLowerCase();
-    if (!excludedIngredients.includes(clean)) {
-      setExcludedIngredients([...excludedIngredients, clean]);
-    }
-    setNewExcluded("");
   };
 
   const handleRemoveExcluded = (item: string) => {
@@ -72,38 +105,44 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
   const popularExclusions = ["coentro", "berinjela", "camarão", "cebola", "alho", "sardinha", "melancia"];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="whoami-title"
+      ref={modalRef}
+    >
       <div className="relative bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-stone-100 flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up">
         
-        {/* Header */}
         <div className="p-6 border-b border-stone-50 bg-gradient-to-r from-pink-500/5 to-purple-500/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-pink-100">
               <User className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-extrabold tracking-tight text-stone-800 font-heading">Quem Sou Eu?</h2>
+              <h2 id="whoami-title" className="text-lg font-extrabold tracking-tight text-stone-800 font-heading">Quem Sou Eu?</h2>
               <p className="text-xs text-stone-400 font-semibold uppercase tracking-wider">Perfil Clínico e Alimentar Individual de Saúde</p>
             </div>
           </div>
           {onClose && (
             <button 
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-stone-50 text-stone-400 hover:text-stone-600 transition-colors"
+              className="p-2 rounded-full hover:bg-stone-50 text-stone-400 hover:text-stone-600 transition-colors touch-target"
+              aria-label="Fechar modal"
+              ref={lastFocusableRef}
             >
               <X className="w-5 h-5" />
             </button>
           )}
         </div>
 
-        {/* Content Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           
-          {/* Section 1: Name */}
           <div className="space-y-2">
             <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">Qual é o seu nome?</label>
             <div className="relative">
               <input 
+                ref={firstFocusableRef}
                 type="text"
                 required
                 placeholder="Ex: Maria Carolina Souza"
@@ -114,7 +153,6 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
             </div>
           </div>
 
-          {/* Section 2: Diet Choice */}
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">Qual é o seu Padrão Alimentar / Dieta?</label>
@@ -147,7 +185,6 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
             </div>
           </div>
 
-          {/* Section 3: Clinical Treatment GLP-1 */}
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">Você utiliza algum Peptídeo Emagrecedor (GLP-1)?</label>
@@ -186,7 +223,6 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
             )}
           </div>
 
-          {/* Section 4: Allergens / Restrictions */}
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">Você possui alguma restrição imunológica ou clínica?</label>
@@ -232,7 +268,6 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
             </div>
           </div>
 
-          {/* Section 5: Excluded Ingredients (Gosto / Não Gosto) */}
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">Ingredientes Banidos (Coisas que você NÃO Gosta)</label>
@@ -277,7 +312,6 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
               </button>
             </div>
 
-            {/* List and preset suggestions */}
             <div className="flex flex-wrap gap-1.5 pt-1">
               {excludedIngredients.length === 0 ? (
                 <span className="text-[10px] bg-stone-50 border border-stone-100 text-stone-400 px-2.5 py-1 rounded-lg font-semibold">Nenhum ingrediente banido ainda</span>
@@ -322,7 +356,6 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
             </div>
           </div>
 
-          {/* Section 6: Water Intake Goal */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <div>
@@ -353,7 +386,6 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
 
         </form>
 
-        {/* Footer actions */}
         <div className="p-4 border-t border-stone-50 bg-stone-50/50 flex gap-2">
           {onClose && (
             <button

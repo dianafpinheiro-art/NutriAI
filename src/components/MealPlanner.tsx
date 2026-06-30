@@ -1,51 +1,73 @@
 import { useState, useEffect } from "react";
-import { Sparkles, ShoppingBag, CheckSquare, Square, Check, RefreshCw, Calendar, Download, AlertOctagon, Heart, ListPlus, Printer } from "lucide-react";
-import { DayMealPlan, PantryIngredient, UserPreferences, RecipeResult, ShoppingItem } from "../types";
+import { ShoppingBag, CheckSquare, Square, Check, RefreshCw, Calendar, Download, AlertOctagon, Heart } from "lucide-react";
+import { DayMealPlan, PantryIngredient, UserPreferences, RecipeResult, ShoppingItem, Meal, Locale } from "../types";
 import { t } from "../i18n";
+import { authFetch } from "../authFetch";
+import { fetchMealPlan, upsertMealPlan, fetchShoppingList, upsertShoppingList } from "../dataHooks";
+import { useRealtimeSync } from "../hooks/useRealtimeSync";
+import { toast } from "sonner";
+import PaywallOverlay from "./PaywallOverlay";
 
 interface MealPlannerProps {
   preferences: UserPreferences;
   pantry: PantryIngredient[];
-  // If parent wants to provide recommended recipes from fridge scans
   externalRecipes: RecipeResult[] | null;
   onClearExternalRecipes: () => void;
+  userId: string;
+  isPremium: boolean;
+  locale: Locale;
+  onShowPaywall: () => void;
 }
 
-export default function MealPlanner({ preferences, pantry, externalRecipes, onClearExternalRecipes }: MealPlannerProps) {
+export default function MealPlanner({ preferences, pantry, externalRecipes, onClearExternalRecipes, userId, isPremium, locale, onShowPaywall }: MealPlannerProps) {
   const [menuLoading, setMenuLoading] = useState(false);
   const [mealPlan, setMealPlan] = useState<DayMealPlan[]>([]);
   const [recipesList, setRecipesList] = useState<RecipeResult[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [activeSegment, setActiveSegment] = useState<"meals" | "recipes" | "shopping">("meals");
+  const [loading, setLoading] = useState(true);
+  const [paywallFeature, setPaywallFeature] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load local storage states if already exists
-    const savedPlan = localStorage.getItem("nutri_current_mealplan");
-    const savedRecipes = localStorage.getItem("nutri_current_recipes");
-    const savedShopping = localStorage.getItem("nutri_current_shopping");
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      fetchMealPlan(userId),
+      fetchShoppingList(userId),
+    ]).then(([planBundle, shopping]) => {
+      if (cancelled) return;
+      setMealPlan(planBundle.plan);
+      setRecipesList(planBundle.recipes);
+      setShoppingList(shopping);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
 
-    if (savedPlan) setMealPlan(JSON.parse(savedPlan));
-    if (savedRecipes) setRecipesList(JSON.parse(savedRecipes));
-    if (savedShopping) setShoppingList(JSON.parse(savedShopping));
-  }, []);
+  useRealtimeSync(userId, () => {
+    upsertMealPlan(userId, mealPlan, recipesList).catch(() => {});
+    upsertShoppingList(userId, shoppingList).catch(() => {});
+  });
 
-  // When parent triggers recipe scans from fridge scan
   useEffect(() => {
     if (externalRecipes && externalRecipes.length > 0) {
       setRecipesList(externalRecipes);
-      localStorage.setItem("nutri_current_recipes", JSON.stringify(externalRecipes));
-      setActiveSegment("recipes"); // jump immediately to recipes tab!
+      upsertMealPlan(userId, mealPlan, externalRecipes).catch(() => {});
+      setActiveSegment("recipes");
       onClearExternalRecipes();
     }
   }, [externalRecipes]);
 
-  // Generate Menu
   const generateMealPlan = async () => {
+    if (!isPremium) {
+      setPaywallFeature(t(locale, "subscriptionFeatureMenu"));
+      return;
+    }
     setMenuLoading(true);
     setMealPlan([]);
     
     try {
-      const response = await fetch("/api/gemini/generate-menu", {
+      const response = await authFetch("/api/gemini/generate-menu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -83,14 +105,12 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
       const data = await response.json();
       if (Array.isArray(data)) {
         setMealPlan(data);
-        localStorage.setItem("nutri_current_mealplan", JSON.stringify(data));
+        upsertMealPlan(userId, data, recipesList).catch(() => {});
         
-        // Auto convert to shopping list with exact quantities!
         const generatedShoppingItems: ShoppingItem[] = [];
-        data.forEach((day: any) => {
-          day.meals.forEach((meal: any) => {
-            meal.ingredients.forEach((ing: any) => {
-              // Avoid exact duplicate names for checklist comfort
+        data.forEach((day: DayMealPlan) => {
+          day.meals.forEach((meal: Meal) => {
+            meal.ingredients.forEach((ing: { name: string; quantity: string }) => {
               const exists = generatedShoppingItems.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
               if (!exists) {
                 generatedShoppingItems.push({
@@ -106,14 +126,15 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
         });
 
         setShoppingList(generatedShoppingItems);
-        localStorage.setItem("nutri_current_shopping", JSON.stringify(generatedShoppingItems));
-        alert("Novo cardápio montado com sucesso e lista de compras exata sincronizada!");
+        upsertShoppingList(userId, generatedShoppingItems).catch(() => {});
+        toast.success("Novo cardápio montado com sucesso e lista de compras exata sincronizada!");
       } else {
         throw new Error("Formato inválido retornado do motor de inteligência.");
       }
-    } catch (err: any) {
-      console.error("Erro completo na geração do plano de refeições:", err);
-      alert("Erro ao conectar ao motor clínico.\n\n" + err?.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("Erro completo na geração do plano de refeições:", message);
+      toast.error("Erro ao conectar ao motor clínico.\n\n" + message);
     } finally {
       setMenuLoading(false);
     }
@@ -124,29 +145,21 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
       item.id === id ? { ...item, checked: !item.checked } : item
     );
     setShoppingList(updated);
-    localStorage.setItem("nutri_current_shopping", JSON.stringify(updated));
+    upsertShoppingList(userId, updated).catch(() => {});
   };
 
   const handleClearShoppingList = () => {
     if (confirm("Limpar lista de compras atual?")) {
       setShoppingList([]);
-      localStorage.removeItem("nutri_current_shopping");
+      upsertShoppingList(userId, []).catch(() => {});
     }
   };
 
-  // Consolidar prontuário de saúde do paciente em formato CSV estruturado
   const handleExportPatientCSV = () => {
-    // Collect from storage to ensure we encompass all components
-    const hLogs = JSON.parse(localStorage.getItem("nutri_hydration_logs") || "[]");
-    const symLogs = JSON.parse(localStorage.getItem("nutri_symptom_logs") || "[]");
-    const dLogs = JSON.parse(localStorage.getItem("nutri_dose_logs") || "[]");
-
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // supports Excel portuguese characters
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
     
-    // Header
     csvContent += "=== PRONTUÁRIO CLÍNICO E NUTRITIONAL CONSOLIDADO ===\n\n";
     
-    // User Settings
     csvContent += "PERFIL DO USUÁRIO\n";
     csvContent += `Dieta Selecionada;${preferences.dietType.toUpperCase()}\n`;
     csvContent += `Tratamento Ativo;${preferences.clinicalTreatment.toUpperCase()}\n`;
@@ -154,28 +167,16 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
     csvContent += `Restrições Clínicas;${preferences.clinicalRestrictions.join(", ") || "Nenhuma"}\n`;
     csvContent += `Ingredientes Banidos;${preferences.excludedIngredients.join(", ") || "Nenhum"}\n\n`;
 
-    // Hydration Table
     csvContent += "HISTÓRICO DE HIDRATAÇÃO\n";
     csvContent += "ID;Data;Quantidade (ml)\n";
-    hLogs.forEach((log: any) => {
-      csvContent += `${log.id};${log.date};${log.amount}\n`;
-    });
     csvContent += "\n";
 
-    // Meds Table
     csvContent += "MONITORAMENTO DE MEDICAMENTO (Mounjaro/Ozempic)\n";
     csvContent += "ID;Data;Medicação;Dose (mg);Local de Aplicação\n";
-    dLogs.forEach((log: any) => {
-      csvContent += `${log.id};${log.date};${log.treatmentType};${log.doseMg};${log.injectionSite}\n`;
-    });
     csvContent += "\n";
 
-    // Symptoms Table
     csvContent += "HISTÓRICO DE REAÇÕES DE DISPNÉIA OU NÁUSEAS\n";
     csvContent += "ID;Data;Intensidade (1 a 10);Sintomas;Gatilhos Associados\n";
-    symLogs.forEach((log: any) => {
-      csvContent += `${log.id};${log.date};${log.intensity};${log.symptoms.join(", ")};${log.triggers.join(", ")}\n`;
-    });
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -186,10 +187,17 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
     document.body.removeChild(link);
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="text-center py-8 text-xs text-stone-400">Carregando planejador...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       
-      {/* Segment controls */}
       <div className="grid grid-cols-3 bg-stone-100 p-1.5 rounded-2xl w-full">
         <button
           onClick={() => setActiveSegment("meals")}
@@ -225,7 +233,6 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
         </button>
       </div>
 
-      {/* Warnings bar for personalized exclusions */}
       <div className="bg-amber-50/60 border border-amber-100/50 p-3 rounded-2xl text-[11px] text-amber-800 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <AlertOctagon className="w-4 h-4 text-amber-600 shrink-0" />
@@ -243,7 +250,6 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
         </button>
       </div>
 
-      {/* Section 1: Weekly schedule planner */}
       {activeSegment === "meals" && (
         <div className="flex flex-col gap-5">
           <div className="flex items-center justify-between">
@@ -255,7 +261,7 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
               <button
                 onClick={generateMealPlan}
                 disabled={menuLoading}
-                className="text-xs text-pink-500 font-extrabold flex items-center gap-1"
+                className="text-xs text-pink-500 font-extrabold flex items-center gap-1 p-2 touch-target"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${menuLoading ? "animate-spin" : ""}`} /> Novo Cardápio
               </button>
@@ -269,7 +275,6 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
                 <p className="text-[10px] text-stone-400 mt-1">Garantindo a remoção estrita de alergênicos e alimentos banidos...</p>
               </div>
               
-              {/* Production Skeleton Loaders matching exact target layout */}
               <div className="border border-stone-100 rounded-3xl p-5 bg-white space-y-4">
                 <div className="h-4 bg-stone-100 rounded-md w-1/4 animate-pulse"></div>
                 <div className="space-y-3">
@@ -325,7 +330,6 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
                           </p>
                         </div>
 
-                        {/* Ingredients listed */}
                         <div className="mt-1 pt-2 border-t border-stone-100 grid grid-cols-2 gap-2">
                           {meal.ingredients.map((ing, idx) => (
                             <div key={idx} className="text-[10px] text-stone-600 flex items-center gap-1.5">
@@ -345,7 +349,6 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
         </div>
       )}
 
-      {/* Section 2: Custom Recipes based on fridge pantry */}
       {activeSegment === "recipes" && (
         <div className="flex flex-col gap-4">
           <div>
@@ -405,7 +408,6 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
         </div>
       )}
 
-      {/* Section 3: Checked checklists for grocery shopping */}
       {activeSegment === "shopping" && (
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
@@ -416,7 +418,7 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
             {shoppingList.length > 0 && (
               <button 
                 onClick={handleClearShoppingList}
-                className="text-stone-400 hover:text-red-500 text-xs font-semibold"
+                className="text-stone-400 hover:text-red-500 text-xs font-semibold p-2 touch-target"
               >
                 Limpar Lista
               </button>
@@ -437,6 +439,14 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
                 <div 
                   key={item.id} 
                   onClick={() => handleToggleShoppingItem(item.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleToggleShoppingItem(item.id);
+                    }
+                  }}
                   className={`p-3 border rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-150 ${
                     item.checked 
                       ? "bg-stone-50/70 border-stone-100 opacity-60 line-through"
@@ -464,6 +474,17 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
             </div>
           )}
         </div>
+      )}
+      {paywallFeature && (
+        <PaywallOverlay
+          featureName={paywallFeature}
+          locale={locale}
+          onSubscribe={() => {
+            setPaywallFeature(null);
+            onShowPaywall();
+          }}
+          onClose={() => setPaywallFeature(null)}
+        />
       )}
     </div>
   );

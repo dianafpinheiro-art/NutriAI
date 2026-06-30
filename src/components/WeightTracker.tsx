@@ -2,10 +2,14 @@ import { useState, useEffect, FormEvent } from "react";
 import { Scale, Target, Plus, Trash2, Calendar, Sparkles, TrendingDown, TrendingUp, Info } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ClinicalTreatment, DietType } from "../types";
+import { fetchWeightLogs, upsertWeightLog } from "../dataHooks";
+import { useRealtimeSync } from "../hooks/useRealtimeSync";
+import { toast } from "sonner";
 
 interface WeightTrackerProps {
   clinicalTreatment: ClinicalTreatment;
   dietType: DietType;
+  userId: string;
 }
 
 interface WeightLog {
@@ -14,54 +18,60 @@ interface WeightLog {
   weight: number; // in kg
 }
 
-export default function WeightTracker({ clinicalTreatment, dietType }: WeightTrackerProps) {
+export default function WeightTracker({ clinicalTreatment, dietType, userId }: WeightTrackerProps) {
   const [height, setHeight] = useState<number>(170); // in cm
   const [targetWeight, setTargetWeight] = useState<number>(70); // in kg
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // Form weight and date
   const [inputWeight, setInputWeight] = useState<string>("");
   const [inputDate, setInputDate] = useState<string>("");
 
   useEffect(() => {
-    // Current date default
     const today = new Date().toISOString().split("T")[0];
     setInputDate(today);
 
-    // Load from localStorage
-    const savedHeight = localStorage.getItem("nutri_height");
-    const savedTarget = localStorage.getItem("nutri_target_weight");
-    const savedLogs = localStorage.getItem("nutri_weight_logs");
+    let cancelled = false;
+    setLoading(true);
+    fetchWeightLogs(userId).then((bundle) => {
+      if (cancelled) return;
+      setWeightLogs(bundle.logs.map((l) => ({ id: l.id, date: l.date, weight: l.weight_kg })));
+      setHeight(bundle.heightCm);
+      setTargetWeight(bundle.targetWeightKg);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
 
-    if (savedHeight) setHeight(parseFloat(savedHeight));
-    if (savedTarget) setTargetWeight(parseFloat(savedTarget));
-    if (savedLogs) {
-      try {
-        setWeightLogs(JSON.parse(savedLogs));
-      } catch (e) {
-        console.error("Erro ao carregar registros de peso", e);
-      }
+  useRealtimeSync(userId, () => {
+    if (weightLogs.length > 0) {
+      const latest = weightLogs[0];
+      upsertWeightLog(userId, {
+        id: latest.id,
+        date: latest.date,
+        weight: latest.weight,
+        heightCm: height,
+        targetWeightKg: targetWeight,
+      }).catch(() => {});
     }
-  }, []);
+  });
 
-  // Setters with localStorage persistence
   const handleSaveHeight = (val: number) => {
     if (isNaN(val) || val <= 0) return;
     setHeight(val);
-    localStorage.setItem("nutri_height", val.toString());
   };
 
   const handleSaveTargetWeight = (val: number) => {
     if (isNaN(val) || val <= 0) return;
     setTargetWeight(val);
-    localStorage.setItem("nutri_target_weight", val.toString());
   };
 
   const handleAddLog = (e: FormEvent) => {
     e.preventDefault();
     const parsedWeight = parseFloat(inputWeight);
     if (isNaN(parsedWeight) || parsedWeight <= 0) {
-      alert("Por favor, insira um peso válido!");
+      toast.warning("Por favor, insira um peso válido!");
       return;
     }
 
@@ -71,16 +81,20 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
       weight: parsedWeight,
     };
 
-    // Sort chronologically (newest first)
     const updated = [newLog, ...weightLogs].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
     
     setWeightLogs(updated);
-    localStorage.setItem("nutri_weight_logs", JSON.stringify(updated));
+    upsertWeightLog(userId, {
+      id: newLog.id,
+      date: newLog.date,
+      weight: newLog.weight,
+      heightCm: height,
+      targetWeightKg: targetWeight,
+    }).catch(() => {});
     setInputWeight("");
     
-    // Set current date again
     const today = new Date().toISOString().split("T")[0];
     setInputDate(today);
   };
@@ -88,30 +102,25 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
   const handleDeleteLog = (id: string) => {
     const updated = weightLogs.filter((log) => log.id !== id);
     setWeightLogs(updated);
-    localStorage.setItem("nutri_weight_logs", JSON.stringify(updated));
   };
 
   // Derived metrics
   const latestWeight = weightLogs.length > 0 ? weightLogs[0].weight : 0;
   const initialWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : 0;
   
-  // BMI (IMC): weight (kg) / height (m)^2
   const heightInMeters = height / 100;
   const bmi = latestWeight > 0 && heightInMeters > 0 
     ? parseFloat((latestWeight / (heightInMeters * heightInMeters)).toFixed(1)) 
     : 0;
 
-  // Ideal weight range based on standard BMI limits 18.5 to 24.9
   const idealWeightMin = heightInMeters > 0 ? parseFloat((18.5 * heightInMeters * heightInMeters).toFixed(1)) : 0;
   const idealWeightMax = heightInMeters > 0 ? parseFloat((24.9 * heightInMeters * heightInMeters).toFixed(1)) : 0;
 
-  // Weight progress calculations
   const weightDifference = latestWeight > 0 ? parseFloat((latestWeight - targetWeight).toFixed(1)) : 0;
   const weightChangeTotal = latestWeight > 0 && initialWeight > 0 
     ? parseFloat((latestWeight - initialWeight).toFixed(1)) 
     : 0;
 
-  // BMI Category explanation & styling
   const getBmiCategory = (bmiVal: number) => {
     if (bmiVal === 0) return { label: "Aguardando dados de peso", color: "text-stone-400 bg-stone-100 border-stone-200" };
     if (bmiVal < 18.5) return { label: "Abaixo do peso", color: "text-amber-600 bg-amber-50 border-amber-100" };
@@ -124,7 +133,6 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
 
   const bmiCat = getBmiCategory(bmi);
 
-  // Dynamic clinical recommendations based on user's current status
   const getClinicalRecommendation = () => {
     if (!latestWeight) {
       return "Registre seu peso para que a IA possa analisar e gerar recomendações metabólicas exclusivas.";
@@ -132,7 +140,6 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
 
     let advice = "";
     
-    // 1. BMI advice
     if (bmi >= 30) {
       advice += "A perda ponderal para obesidade apoia a redução da inflamação crônica. ";
     } else if (bmi >= 25) {
@@ -143,7 +150,6 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
       advice += "Atenção: faixa abaixo do peso. Recomenda-se superávit calórico controlado e foco em hipertrofia saudável. ";
     }
 
-    // 2. Clinical medication treatment advice
     if (clinicalTreatment === "mounjaro") {
       advice += "Utilizando Tirzepatida (Mounjaro), priorize o consumo proteico elevado (mínimo de 1.2g/kg ao dia) e ingestão abundante de água para mitigar a perda excessiva de massa muscular magra e evitar constipação.";
     } else if (clinicalTreatment === "ozempic") {
@@ -152,7 +158,6 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
       advice += "Para otimização metabólica sustentável tradicional, fragmente o consumo em intervalos regulares de 3 a 4 horas.";
     }
 
-    // 3. Diet selection advice
     if (dietType === "low-carb" || dietType === "cetogenica") {
       advice += " Como você escolheu uma linha de baixo carboidrato, capriche no consumo de vegetais folhosos e mantenha o aporte de eletrólitos estável para evitar fadiga ou dor de cabeça transiente.";
     } else if (dietType === "deficit-calorico") {
@@ -163,6 +168,28 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
 
     return advice;
   };
+
+  if (loading) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 flex flex-col gap-6"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-pink-50 text-pink-500 rounded-2xl">
+            <Scale className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-heading font-extrabold text-stone-800">Controle de Peso & IMC</h3>
+            <p className="text-xs text-stone-500">Métricas analíticas de composição corporal e meta de emagrecimento</p>
+          </div>
+        </div>
+        <div className="text-center py-8 text-xs text-stone-400">Carregando...</div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div 
@@ -224,7 +251,6 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
       {/* BMI and target metrics if weight logs exist */}
       {latestWeight > 0 ? (
         <div className="grid grid-cols-2 gap-4">
-          {/* IMC block */}
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4 flex flex-col justify-between">
             <div>
               <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">IMC Atual</span>
@@ -235,7 +261,6 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
             </span>
           </div>
 
-          {/* Progress to target block */}
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4 flex flex-col justify-between">
             <div>
               <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Progresso da Meta</span>
@@ -266,7 +291,6 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
         </div>
       )}
 
-      {/* Progression details (Start vs current, and difference) */}
       {latestWeight > 0 && weightLogs.length > 1 && (
         <div className="bg-pink-50/20 border border-pink-100/50 rounded-2xl p-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -298,7 +322,6 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
         </div>
       )}
 
-      {/* Clinical AI Tip block */}
       {latestWeight > 0 && (
         <div className="bg-gradient-to-tr from-pink-500/5 to-purple-500/5 border border-pink-100/40 rounded-2xl p-4 flex gap-3">
           <div className="shrink-0 text-pink-500 mt-1">
@@ -315,7 +338,6 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
         </div>
       )}
 
-      {/* Form Log Add */}
       <form onSubmit={handleAddLog} className="flex flex-col gap-3">
         <h4 className="text-xs font-heading font-bold text-stone-700 uppercase tracking-wider border-b border-stone-100 pb-2">
           Registrar Entrada de Peso Diário/Semanal
@@ -352,7 +374,6 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
         </button>
       </form>
 
-      {/* History Log table list */}
       {weightLogs.length > 0 && (
         <div>
           <h4 className="text-[10px] font-heading font-extrabold text-stone-400 uppercase tracking-widest mb-2.5">
@@ -391,8 +412,9 @@ export default function WeightTracker({ clinicalTreatment, dietType }: WeightTra
                         <td className="p-2.5 text-center pr-4">
                           <button
                             onClick={() => handleDeleteLog(log.id)}
-                            className="text-stone-300 hover:text-red-500 p-1 rounded-md transition-colors inline-block touch-target"
+                            className="text-stone-300 hover:text-red-500 p-2 rounded-md transition-colors inline-block touch-target"
                             title="Deletar registro"
+                            aria-label="Deletar registro"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
