@@ -61,6 +61,12 @@ app.use("/api/gemini", requireSupabaseSession, rateLimitGemini, geminiRouter);
 app.post("/api/payments/webhook", postWebhook);
 app.use("/api/payments", requireSupabaseSession, paymentRouter);
 
+// Error handler — loga e retorna o erro para debug
+app.use((err: any, _req: Request, res: Response, _next: any) => {
+  console.error("[SERVER ERROR]", err);
+  res.status(500).json({ error: err?.message || "Internal server error", stack: err?.stack });
+});
+
 async function startServer(): Promise<void> {
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const { createServer: createViteServer } = await import("vite");
