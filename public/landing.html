@@ -21,6 +21,24 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   
+  <!-- Meta Pixel (Facebook) -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', 'SEU_PIXEL_ID');
+    fbq('track', 'PageView');
+  </script>
+  <noscript>
+    <img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=SEU_PIXEL_ID&ev=PageView&noscript=1"/>
+  </noscript>
+  
   <style>
     :root {
       --bg-primary: #fafaf9;
@@ -280,7 +298,7 @@
           </p>
           
           <div class="animate-in delay-3" style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-bottom: 2.5rem;">
-            <a href="/" class="btn-primary" style="font-size: 1.125rem; padding: 1.125rem 2.5rem;">
+            <a href="/" class="btn-primary" style="font-size: 1.125rem; padding: 1.125rem 2.5rem;" onclick="fbq('track', 'Lead');">
               <i data-lucide="zap" style="width: 1.25rem; height: 1.25rem;"></i>
               Começar 7 dias grátis
             </a>
@@ -528,7 +546,7 @@
             <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Rastreio de sintomas</span>
           </div>
           
-          <a href="/" class="btn-primary" style="width: 100%; justify-content: center;">
+          <a href="/" class="btn-primary" style="width: 100%; justify-content: center;" onclick="fbq('track', 'Lead');">
             <i data-lucide="zap" style="width: 1.125rem; height: 1.125rem;"></i>
             Começar 7 dias grátis
           </a>
@@ -554,7 +572,7 @@
             <span style="display: flex; align-items: center; gap: 0.625rem;"><i data-lucide="check" class="check" style="width: 1.125rem; height: 1.125rem;"></i> Cancele quando quiser</span>
           </div>
           
-          <a href="/" class="btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--pink-600), var(--purple-600)); box-shadow: 0 4px 14px rgba(219, 39, 119, 0.4);">
+          <a href="/" class="btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--pink-600), var(--purple-600)); box-shadow: 0 4px 14px rgba(219, 39, 119, 0.4);" onclick="fbq('track', 'Lead');">
             <i data-lucide="crown" style="width: 1.125rem; height: 1.125rem;"></i>
             Começar 7 dias grátis
           </a>
