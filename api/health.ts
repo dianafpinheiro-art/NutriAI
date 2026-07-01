@@ -1,6 +1,4 @@
-import type { Request, Response } from "express";
-
-export default function handler(_req: Request, res: Response) {
+export default function handler(_req: any, res: any) {
   res.status(200).json({
     status: "ok",
     timestamp: new Date().toISOString(),
