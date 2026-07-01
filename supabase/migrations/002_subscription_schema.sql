@@ -1,5 +1,6 @@
 -- PersonalDiet / NutriAI — Subscription Schema Migration
--- Execute this in the Supabase Dashboard SQL Editor (new query)
+-- Execute this in the Supabase Dashboard SQL Editor (new query).
+-- Safe to run more than once (idempotent).
 
 -- =============================================================================
 -- 9. SUBSCRIPTION COLUMNS (user_profiles)
@@ -28,7 +29,10 @@ create table if not exists public.payments (
   updated_at timestamptz default now()
 );
 
--- Unique constraint: evita duplicatas de pagamento por MP payment id
+-- Unique constraint: evita duplicatas de pagamento por MP payment id.
+-- Postgres nao aceita "add constraint if not exists", entao usamos DROP + ADD idempotente.
+alter table public.payments
+  drop constraint if exists payments_mercado_pago_payment_id_key;
 alter table public.payments
   add constraint payments_mercado_pago_payment_id_key unique (mercado_pago_payment_id);
 
@@ -37,28 +41,34 @@ alter table public.payments
 -- =============================================================================
 alter table public.payments enable row level security;
 
-create policy if not exists "payments_select_own"
+-- IMPORTANTE: Postgres NAO suporta "create policy if not exists".
+-- Por isso derrubamos a policy antes de recria-la (torna o script re-executavel).
+drop policy if exists "payments_select_own" on public.payments;
+create policy "payments_select_own"
   on public.payments for select
   using (auth.uid() = user_id);
 
-create policy if not exists "payments_insert_own"
+drop policy if exists "payments_insert_own" on public.payments;
+create policy "payments_insert_own"
   on public.payments for insert
   with check (auth.uid() = user_id);
 
-create policy if not exists "payments_update_own"
+drop policy if exists "payments_update_own" on public.payments;
+create policy "payments_update_own"
   on public.payments for update
   using (auth.uid() = user_id);
 
-create policy if not exists "payments_delete_own"
+drop policy if exists "payments_delete_own" on public.payments;
+create policy "payments_delete_own"
   on public.payments for delete
   using (auth.uid() = user_id);
 
 -- =============================================================================
 -- HOW TO RUN THIS SQL
 -- =============================================================================
--- 1. Go to your Supabase project Dashboard → SQL Editor → New query
+-- 1. Go to your Supabase project Dashboard -> SQL Editor -> New query
 -- 2. Copy and paste the entire contents of this file.
--- 3. Click "Run". No errors should appear.
+-- 3. Click "Run". Deve rodar sem erros (e pode ser rodado de novo sem quebrar).
 -- 4. Verify in the Table Editor that the new columns appear in user_profiles
---    and the payments table appears under the "public" schema.
+--    and the payments table appears under the "public" schema with RLS enabled.
 -- =============================================================================

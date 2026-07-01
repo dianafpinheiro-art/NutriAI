@@ -21,7 +21,11 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   
-  <!-- Meta Pixel (Facebook) -->
+  <!-- ============================================================= -->
+  <!-- Meta Pixel (Facebook)                                          -->
+  <!-- >>> COLE SEU PIXEL ID nos DOIS lugares marcados abaixo <<<     -->
+  <!-- Troque SEU_PIXEL_ID pelo numero do seu pixel (16 digitos)      -->
+  <!-- ============================================================= -->
   <script>
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -31,10 +35,11 @@
     t.src=v;s=b.getElementsByTagName(e)[0];
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', 'SEU_PIXEL_ID');
+    fbq('init', 'SEU_PIXEL_ID'); /* <<< COLE SEU PIXEL ID AQUI (1/2) */
     fbq('track', 'PageView');
   </script>
   <noscript>
+    <!-- <<< COLE SEU PIXEL ID AQUI (2/2) no id= abaixo -->
     <img height="1" width="1" style="display:none"
     src="https://www.facebook.com/tr?id=SEU_PIXEL_ID&ev=PageView&noscript=1"/>
   </noscript>
@@ -689,7 +694,7 @@
           <a href="/" class="btn-ghost" style="font-size: 0.875rem;">Acessar App</a>
           <a href="#precos" class="btn-ghost" style="font-size: 0.875rem;">Preços</a>
           <a href="#faq" class="btn-ghost" style="font-size: 0.875rem;">Dúvidas</a>
-          <a href="#" class="btn-ghost" style="font-size: 0.875rem;" onclick="alert('Em breve!'); return false;">Contato</a>
+          <a href="mailto:dianafpinheiro@gmail.com" class="btn-ghost" style="font-size: 0.875rem;">Contato</a>
         </div>
         
         <div class="disclaimer" style="text-align: center; max-width: 640px; width: 100%;">
@@ -698,8 +703,8 @@
           </p>
           <p>
             © 2026 PersonalDiet. Todos os direitos reservados. | 
-            <a href="#" style="color: var(--text-muted); text-decoration: underline;" onclick="alert('Em breve!'); return false;">Política de Privacidade</a> | 
-            <a href="#" style="color: var(--text-muted); text-decoration: underline;" onclick="alert('Em breve!'); return false;">Termos de Uso</a>
+            <a href="/privacidade.html" style="color: var(--text-muted); text-decoration: underline;">Política de Privacidade</a> |
+            <a href="/termos.html" style="color: var(--text-muted); text-decoration: underline;">Termos de Uso</a>
           </p>
         </div>
       </div>
@@ -724,21 +729,5 @@
       if (firstFaq) toggleFaq(firstFaq);
     });
   </script>
-  
-  <!-- Pixel Meta (placeholder — substituir pelo seu quando criar) -->
-  <!-- 
-  <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window,document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', 'SEU_PIXEL_ID');
-    fbq('track', 'PageView');
-  </script>
-  -->
 </body>
 </html>
