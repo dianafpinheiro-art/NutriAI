@@ -1,9 +1,21 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const appBaseUrl = process.env.APP_BASE_URL || "https://nutri-ai-5qaa.vercel.app";
+function cleanEnv(value: string | undefined): string {
+  const trimmed = (value || "").replace(/^\uFEFF/, "").trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).replace(/^\uFEFF/, "").trim();
+  }
+  return trimmed;
+}
+
+const supabaseUrl = cleanEnv(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL);
+const supabaseAnonKey = cleanEnv(process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY);
+const serviceRoleKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+const mercadoPagoAccessToken = cleanEnv(process.env.MERCADO_PAGO_ACCESS_TOKEN);
+const appBaseUrl = cleanEnv(process.env.APP_BASE_URL) || "https://nutri-ai-5qaa.vercel.app";
 
 const supabaseAuth = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
@@ -56,7 +68,7 @@ async function createPaymentPreference(req: {
   const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+      Authorization: `Bearer ${mercadoPagoAccessToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -102,7 +114,7 @@ export default async function handler(req: any, res: any) {
     if (!supabaseAuth || !supabaseAdmin) {
       return res.status(500).json({ error: "Supabase server env vars missing on Vercel." });
     }
-    if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+    if (!mercadoPagoAccessToken) {
       return res.status(500).json({ error: "MERCADO_PAGO_ACCESS_TOKEN missing on Vercel." });
     }
 
