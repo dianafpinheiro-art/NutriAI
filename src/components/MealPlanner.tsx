@@ -7,6 +7,7 @@ import { fetchMealPlan, upsertMealPlan, fetchShoppingList, upsertShoppingList } 
 import { useRealtimeSync } from "../hooks/useRealtimeSync";
 import { toast } from "sonner";
 import PaywallOverlay from "./PaywallOverlay";
+import MedicalDisclaimer from "./MedicalDisclaimer";
 
 interface MealPlannerProps {
   preferences: UserPreferences;
@@ -486,6 +487,8 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
           onClose={() => setPaywallFeature(null)}
         />
       )}
+
+      <MedicalDisclaimer locale={locale} variant="card" className="mt-6" />
     </div>
   );
 }

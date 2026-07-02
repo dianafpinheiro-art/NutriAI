@@ -22,6 +22,7 @@ import { migrateLocalStorageToSupabase } from "./migrateLocalStorage";
 import { usePaywall } from "./hooks/usePaywall";
 import SubscriptionPlans from "./components/SubscriptionPlans";
 import SubscriptionManager from "./components/SubscriptionManager";
+import MedicalDisclaimer from "./components/MedicalDisclaimer";
 
 // Inner Components
 import HydrationTracker from "./components/HydrationTracker";
@@ -493,6 +494,7 @@ export default function App() {
       <footer className="text-center py-6 mt-12 text-[10px] text-stone-400 font-bold border-t border-stone-100 flex flex-col items-center gap-1.5 max-w-sm mx-auto p-4 leading-normal">
         <div>PersonalDiet — Seu Organizador Pessoal de Receitas e Dietas</div>
         <div className="bg-stone-100 px-2 py-0.5 rounded text-stone-500 border border-stone-200/40">v3.0.0-pwa (Economia & Inteligência)</div>
+        <MedicalDisclaimer locale={locale} className="mt-2" />
       </footer>
 
       <InstallPwaBanner />

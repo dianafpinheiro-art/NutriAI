@@ -5,6 +5,7 @@ import { Heart, Mail, Lock, ArrowRight } from 'lucide-react';
 import { t } from '../i18n';
 import type { Locale } from '../types';
 import type { Session } from '@supabase/supabase-js';
+import MedicalDisclaimer from './MedicalDisclaimer';
 
 interface AuthProps {
   onSession: (session: Session | null) => void;
@@ -40,8 +41,31 @@ export default function Auth({ onSession, locale }: AuthProps) {
           password,
         });
         if (error) throw error;
-        toast.success(t(locale, 'authSignUpSuccess') || 'Conta criada! Confirme seu email ou faca login se estiver habilitado diretamente.');
-        if (data.session) onSession(data.session);
+
+        // Confirmacao de email DESLIGADA: o signUp ja devolve a sessao.
+        // Segue direto para o app (que abre os planos + Mercado Pago).
+        if (data.session) {
+          toast.success(t(locale, 'authSignUpSuccess') || 'Conta criada! Vamos escolher seu plano.');
+          onSession(data.session);
+          return;
+        }
+
+        // Alguns projetos nao devolvem sessao no signUp mas permitem login imediato.
+        const { data: signInData } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
+        if (signInData.session) {
+          toast.success(t(locale, 'authSignUpSuccess') || 'Conta criada! Vamos escolher seu plano.');
+          onSession(signInData.session);
+          return;
+        }
+
+        // Confirmacao de email LIGADA: nao ha como seguir para o pagamento
+        // enquanto o email nao for confirmado.
+        toast.info(
+          'Conta criada! Confirme seu email pelo link que enviamos e depois faca login para escolher seu plano.'
+        );
       } else {
         const { error, data } = await supabase.auth.signInWithPassword({
           email: normalizedEmail,
@@ -143,6 +167,8 @@ export default function Auth({ onSession, locale }: AuthProps) {
           </a>
         </div>
       </div>
+
+      <MedicalDisclaimer locale={locale} className="w-full max-w-sm mt-5 px-2" />
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Star, Check, Zap, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { startTrial } from "../dataHooks";
 import { t } from "../i18n";
 import type { Locale } from "../types";
+import MedicalDisclaimer from "./MedicalDisclaimer";
 
 interface SubscriptionPlansProps {
   userId: string;
@@ -86,9 +86,6 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
       if (data.checkoutUrl) {
         setCheckoutUrl(data.checkoutUrl);
         setCheckoutStep("Checkout pronto. Abrindo Mercado Pago...");
-        startTrial(userId).catch((err) => {
-          console.error("[SubscriptionPlans] trial update failed:", err?.message || err);
-        });
         toast.success("Checkout criado", {
           description: "Se a pagina nao abrir sozinha, toque no botao abaixo.",
         });
@@ -198,6 +195,11 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
             </div>
           )}
 
+          <div className="flex items-center justify-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs font-bold text-center">
+            <Check className="w-4 h-4 shrink-0" />
+            {t(locale, "guaranteeNote")}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Monthly Plan */}
             <div className="flex flex-col gap-5 p-5 bg-white border border-stone-100 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
@@ -283,6 +285,8 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
               </button>
             </div>
           )}
+
+          <MedicalDisclaimer locale={locale} variant="card" />
         </div>
       </div>
     </div>
