@@ -17,6 +17,7 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
   const [loading, setLoading] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutStep, setCheckoutStep] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const firstFocusableRef = useRef<HTMLButtonElement>(null);
 
@@ -58,25 +59,33 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
     setLoading(true);
     setCheckoutUrl(null);
     setCheckoutError(null);
+    setCheckoutStep("Preparando checkout...");
     try {
       if (!accessToken) {
         throw new Error("Sessao expirada. Saia e entre novamente para continuar.");
       }
 
-      const res = await fetch("/api/payments/subscription", {
+      setCheckoutStep("Conectando ao Mercado Pago...");
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+      const res = await fetch(`${window.location.origin}/api/payments/subscription`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ plan }),
-      });
+        signal: controller.signal,
+      }).finally(() => window.clearTimeout(timeoutId));
+
+      setCheckoutStep("Recebendo link de pagamento...");
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "Nao foi possivel abrir o checkout.");
       }
       if (data.checkoutUrl) {
         setCheckoutUrl(data.checkoutUrl);
+        setCheckoutStep("Checkout pronto. Abrindo Mercado Pago...");
         startTrial(userId).catch((err) => {
           console.error("[SubscriptionPlans] trial update failed:", err?.message || err);
         });
@@ -90,7 +99,12 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
         throw new Error("Checkout nao retornou link de pagamento.");
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message =
+        err instanceof DOMException && err.name === "AbortError"
+          ? "A conexao com o checkout demorou demais. Tente novamente ou atualize a pagina."
+          : err instanceof Error
+            ? err.message
+            : String(err);
       console.error("[SubscriptionPlans] trial start failed:", message);
       setCheckoutError(message);
       toast.error("Nao consegui abrir o checkout", {
@@ -98,6 +112,7 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
       });
     } finally {
       setLoading(false);
+      setCheckoutStep(null);
     }
   };
 
@@ -177,6 +192,12 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
             </div>
           )}
 
+          {checkoutStep && (
+            <div className="p-3 bg-stone-50 border border-stone-200 rounded-2xl text-xs font-bold text-stone-700 text-center">
+              {checkoutStep}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Monthly Plan */}
             <div className="flex flex-col gap-5 p-5 bg-white border border-stone-100 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
@@ -207,7 +228,7 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
                 disabled={loading}
                 className="w-full mt-auto py-3 bg-stone-800 hover:bg-stone-900 text-white font-extrabold text-xs rounded-2xl shadow-sm btn-interactive disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                {loading ? t(locale, "loading") : t(locale, "startTrial")}
+                {loading ? "Abrindo checkout..." : t(locale, "startTrial")}
               </button>
             </div>
 
@@ -247,7 +268,7 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
                 disabled={loading}
                 className="w-full mt-auto py-3 bg-gradient-to-r from-pink-500 to-purple-500 hover:opacity-95 text-white font-extrabold text-xs rounded-2xl shadow-md shadow-pink-100 btn-interactive disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                {loading ? t(locale, "loading") : t(locale, "startTrial")}
+                {loading ? "Abrindo checkout..." : t(locale, "startTrial")}
               </button>
             </div>
           </div>
