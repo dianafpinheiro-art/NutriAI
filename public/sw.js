@@ -1,4 +1,4 @@
-const CACHE_NAME = "nutriai-cache-v4";
+const CACHE_NAME = "nutriai-cache-v5";
 const ASSETS = [
   "/",
   "/index.html",
