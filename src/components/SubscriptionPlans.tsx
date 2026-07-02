@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Star, Check, Zap } from "lucide-react";
+import { toast } from "sonner";
 import { authFetch } from "../authFetch";
 import { startTrial } from "../dataHooks";
 import { t } from "../i18n";
@@ -61,15 +62,20 @@ export default function SubscriptionPlans({ userId, locale, onClose, currentStat
         body: JSON.stringify({ plan }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Nao foi possivel abrir o checkout.");
+      }
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
       } else {
-        onClose();
+        throw new Error("Checkout nao retornou link de pagamento.");
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[SubscriptionPlans] trial start failed:", message);
-      onClose();
+      toast.error("Nao consegui abrir o checkout", {
+        description: message,
+      });
     } finally {
       setLoading(false);
     }
