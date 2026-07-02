@@ -12,12 +12,17 @@ interface AuthProps {
 }
 
 export default function Auth({ onSession, locale }: AuthProps) {
+  const getInitialAuthMode = () => new URLSearchParams(window.location.search).get('signup') === '1';
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(() => {
-    return new URLSearchParams(window.location.search).get('signup') === '1';
-  });
+  const [isSignUp, setIsSignUp] = useState(getInitialAuthMode);
+
+  const switchAuthMode = () => {
+    const nextIsSignUp = !isSignUp;
+    setIsSignUp(nextIsSignUp);
+    window.history.replaceState(null, '', nextIsSignUp ? '/?signup=1' : '/');
+  };
 
   const handleAuth = async (e: FormEvent) => {
     e.preventDefault();
@@ -112,7 +117,7 @@ export default function Auth({ onSession, locale }: AuthProps) {
         <div className="text-center border-t border-stone-100 pt-5">
           <button
             type="button"
-            onClick={() => setIsSignUp((current) => !current)}
+            onClick={switchAuthMode}
             className="text-xs font-bold text-pink-500 hover:text-purple-500 transition-colors"
           >
             {isSignUp ? 'Ja tem uma conta? Faca login' : 'Ainda nao tem conta? Crie uma agora'}
