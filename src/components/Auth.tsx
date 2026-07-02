@@ -19,14 +19,22 @@ export default function Auth({ onSession, locale }: AuthProps) {
     window.location.pathname === '/cadastro' ||
     new URLSearchParams(window.location.search).get('signup') === '1';
 
-  const handleAuth = async (e: FormEvent) => {
-    e.preventDefault();
+  const authenticate = async (mode: 'signIn' | 'signUp') => {
+    if (!email.trim() || !password) {
+      toast.error('Preencha email e senha para continuar.');
+      return;
+    }
+    if (mode === 'signUp' && password.length < 8) {
+      toast.error('Use uma senha com pelo menos 8 caracteres.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
 
-      if (isSignUp) {
+      if (mode === 'signUp') {
         const { error, data } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
@@ -48,6 +56,11 @@ export default function Auth({ onSession, locale }: AuthProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAuth = async (e: FormEvent) => {
+    e.preventDefault();
+    await authenticate(isSignUp ? 'signUp' : 'signIn');
   };
 
   return (
@@ -107,6 +120,18 @@ export default function Auth({ onSession, locale }: AuthProps) {
             {loading ? 'Carregando...' : isSignUp ? 'Criar minha conta' : 'Entrar na minha conta'}
             {!loading && <ArrowRight className="w-4 h-4" />}
           </button>
+
+          {!isSignUp && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => authenticate('signUp')}
+              className="w-full py-3 bg-white hover:bg-pink-50 text-pink-600 border border-pink-200 rounded-xl shadow-sm text-sm font-extrabold btn-interactive flex items-center justify-center gap-2 disabled:opacity-70"
+            >
+              Criar conta gratis
+              {!loading && <ArrowRight className="w-4 h-4" />}
+            </button>
+          )}
         </form>
 
         <div className="text-center border-t border-stone-100 pt-5">
