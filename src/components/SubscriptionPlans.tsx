@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Star, Check, Zap } from "lucide-react";
+import { X, Star, Check, Zap, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { authFetch } from "../authFetch";
 import { startTrial } from "../dataHooks";
@@ -15,6 +15,8 @@ interface SubscriptionPlansProps {
 
 export default function SubscriptionPlans({ userId, locale, onClose, currentStatus }: SubscriptionPlansProps) {
   const [loading, setLoading] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const firstFocusableRef = useRef<HTMLButtonElement>(null);
 
@@ -54,6 +56,8 @@ export default function SubscriptionPlans({ userId, locale, onClose, currentStat
   const handleStartTrial = async (plan: "monthly" | "annual") => {
     if (!userId) return;
     setLoading(true);
+    setCheckoutUrl(null);
+    setCheckoutError(null);
     try {
       await startTrial(userId);
       const res = await authFetch("/api/payments/subscription", {
@@ -66,13 +70,20 @@ export default function SubscriptionPlans({ userId, locale, onClose, currentStat
         throw new Error(data.error || "Nao foi possivel abrir o checkout.");
       }
       if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+        setCheckoutUrl(data.checkoutUrl);
+        toast.success("Checkout criado", {
+          description: "Se a pagina nao abrir sozinha, toque no botao abaixo.",
+        });
+        window.setTimeout(() => {
+          window.location.assign(data.checkoutUrl);
+        }, 150);
       } else {
         throw new Error("Checkout nao retornou link de pagamento.");
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[SubscriptionPlans] trial start failed:", message);
+      setCheckoutError(message);
       toast.error("Nao consegui abrir o checkout", {
         description: message,
       });
@@ -131,6 +142,29 @@ export default function SubscriptionPlans({ userId, locale, onClose, currentStat
           {isUrgent && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs font-bold text-center">
               {t(locale, "subscriptionTrialExpired")}
+            </div>
+          )}
+
+          {checkoutUrl && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-xs font-bold text-emerald-800">
+                Checkout pronto. Se nao abriu automaticamente, use o botao ao lado.
+              </p>
+              <a
+                href={checkoutUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm"
+              >
+                Abrir Mercado Pago
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
+          )}
+
+          {checkoutError && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-xs font-bold text-red-800">
+              {checkoutError}
             </div>
           )}
 
