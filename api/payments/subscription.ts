@@ -1,9 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
-import { createPaymentPreference } from "../../src/server/services/paymentService.ts";
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const appBaseUrl = process.env.APP_BASE_URL || "https://nutri-ai-5qaa.vercel.app";
 
 const supabaseAuth = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
@@ -27,6 +27,69 @@ async function readBody(req: any): Promise<any> {
   }
   const raw = Buffer.concat(chunks).toString("utf8");
   return raw ? JSON.parse(raw) : {};
+}
+
+async function createPaymentPreference(req: {
+  userId: string;
+  email: string;
+  plan: "monthly" | "annual";
+}): Promise<{ id: string; init_point: string; sandbox_init_point: string }> {
+  const items =
+    req.plan === "monthly"
+      ? [
+          {
+            title: "PersonalDiet Premium - Mensal",
+            quantity: 1,
+            unit_price: 19.9,
+            currency_id: "BRL",
+          },
+        ]
+      : [
+          {
+            title: "PersonalDiet Premium - Anual",
+            quantity: 1,
+            unit_price: 149.9,
+            currency_id: "BRL",
+          },
+        ];
+
+  const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      items,
+      payer: { email: req.email },
+      back_urls: {
+        success: `${appBaseUrl}/subscription/success`,
+        failure: `${appBaseUrl}/subscription/failure`,
+        pending: `${appBaseUrl}/subscription/pending`,
+      },
+      auto_return: "approved",
+      external_reference: `${req.userId}:${req.plan}`,
+      notification_url: `${appBaseUrl}/api/payments/webhook`,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Mercado Pago error: ${response.status} ${text}`);
+  }
+
+  const raw = (await response.json()) as Record<string, unknown>;
+  const preference = {
+    id: String(raw.id ?? ""),
+    init_point: String(raw.init_point ?? ""),
+    sandbox_init_point: String(raw.sandbox_init_point ?? ""),
+  };
+
+  if (!preference.id) {
+    throw new Error("Resposta do Mercado Pago nao contem preference id");
+  }
+
+  return preference;
 }
 
 export default async function handler(req: any, res: any) {
