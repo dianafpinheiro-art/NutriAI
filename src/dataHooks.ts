@@ -464,11 +464,12 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
 export async function startTrial(userId: string): Promise<void> {
   try {
     const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    const { error } = await supabase.from("user_profiles").update({
+    const { error } = await supabase.from("user_profiles").upsert({
+      user_id: userId,
       subscription_status: "trial",
       trial_ends_at: trialEndsAt.toISOString(),
       updated_at: new Date().toISOString(),
-    }).eq("user_id", userId);
+    }, { onConflict: "user_id" });
     if (error) handleError("startTrial", error);
   } catch (err) {
     handleError("startTrial", err);

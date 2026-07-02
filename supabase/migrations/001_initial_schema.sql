@@ -22,6 +22,8 @@ create table if not exists public.user_profiles (
 
 -- Unique constraint: one profile per user
 alter table public.user_profiles
+  drop constraint if exists user_profiles_user_id_key;
+alter table public.user_profiles
   add constraint user_profiles_user_id_key unique (user_id);
 
 -- =============================================================================
@@ -106,6 +108,8 @@ create table if not exists public.meal_plans (
 
 -- Unique constraint: one meal plan per user
 alter table public.meal_plans
+  drop constraint if exists meal_plans_user_id_key;
+alter table public.meal_plans
   add constraint meal_plans_user_id_key unique (user_id);
 
 -- =============================================================================
@@ -121,6 +125,8 @@ create table if not exists public.shopping_lists (
 
 -- Unique constraint: one shopping list per user
 alter table public.shopping_lists
+  drop constraint if exists shopping_lists_user_id_key;
+alter table public.shopping_lists
   add constraint shopping_lists_user_id_key unique (user_id);
 
 -- =============================================================================
@@ -129,121 +135,153 @@ alter table public.shopping_lists
 
 -- user_profiles
 alter table public.user_profiles enable row level security;
-create policy if not exists "user_profiles_select_own"
+drop policy if exists "user_profiles_select_own" on public.user_profiles;
+create policy "user_profiles_select_own"
   on public.user_profiles for select
   using (auth.uid() = user_id);
-create policy if not exists "user_profiles_insert_own"
+drop policy if exists "user_profiles_insert_own" on public.user_profiles;
+create policy "user_profiles_insert_own"
   on public.user_profiles for insert
   with check (auth.uid() = user_id);
-create policy if not exists "user_profiles_update_own"
+drop policy if exists "user_profiles_update_own" on public.user_profiles;
+create policy "user_profiles_update_own"
   on public.user_profiles for update
   using (auth.uid() = user_id);
-create policy if not exists "user_profiles_delete_own"
+drop policy if exists "user_profiles_delete_own" on public.user_profiles;
+create policy "user_profiles_delete_own"
   on public.user_profiles for delete
   using (auth.uid() = user_id);
 
 -- hydration_logs
 alter table public.hydration_logs enable row level security;
-create policy if not exists "hydration_logs_select_own"
+drop policy if exists "hydration_logs_select_own" on public.hydration_logs;
+create policy "hydration_logs_select_own"
   on public.hydration_logs for select
   using (auth.uid() = user_id);
-create policy if not exists "hydration_logs_insert_own"
+drop policy if exists "hydration_logs_insert_own" on public.hydration_logs;
+create policy "hydration_logs_insert_own"
   on public.hydration_logs for insert
   with check (auth.uid() = user_id);
-create policy if not exists "hydration_logs_update_own"
+drop policy if exists "hydration_logs_update_own" on public.hydration_logs;
+create policy "hydration_logs_update_own"
   on public.hydration_logs for update
   using (auth.uid() = user_id);
-create policy if not exists "hydration_logs_delete_own"
+drop policy if exists "hydration_logs_delete_own" on public.hydration_logs;
+create policy "hydration_logs_delete_own"
   on public.hydration_logs for delete
   using (auth.uid() = user_id);
 
 -- symptom_logs
 alter table public.symptom_logs enable row level security;
-create policy if not exists "symptom_logs_select_own"
+drop policy if exists "symptom_logs_select_own" on public.symptom_logs;
+create policy "symptom_logs_select_own"
   on public.symptom_logs for select
   using (auth.uid() = user_id);
-create policy if not exists "symptom_logs_insert_own"
+drop policy if exists "symptom_logs_insert_own" on public.symptom_logs;
+create policy "symptom_logs_insert_own"
   on public.symptom_logs for insert
   with check (auth.uid() = user_id);
-create policy if not exists "symptom_logs_update_own"
+drop policy if exists "symptom_logs_update_own" on public.symptom_logs;
+create policy "symptom_logs_update_own"
   on public.symptom_logs for update
   using (auth.uid() = user_id);
-create policy if not exists "symptom_logs_delete_own"
+drop policy if exists "symptom_logs_delete_own" on public.symptom_logs;
+create policy "symptom_logs_delete_own"
   on public.symptom_logs for delete
   using (auth.uid() = user_id);
 
 -- weight_logs
 alter table public.weight_logs enable row level security;
-create policy if not exists "weight_logs_select_own"
+drop policy if exists "weight_logs_select_own" on public.weight_logs;
+create policy "weight_logs_select_own"
   on public.weight_logs for select
   using (auth.uid() = user_id);
-create policy if not exists "weight_logs_insert_own"
+drop policy if exists "weight_logs_insert_own" on public.weight_logs;
+create policy "weight_logs_insert_own"
   on public.weight_logs for insert
   with check (auth.uid() = user_id);
-create policy if not exists "weight_logs_update_own"
+drop policy if exists "weight_logs_update_own" on public.weight_logs;
+create policy "weight_logs_update_own"
   on public.weight_logs for update
   using (auth.uid() = user_id);
-create policy if not exists "weight_logs_delete_own"
+drop policy if exists "weight_logs_delete_own" on public.weight_logs;
+create policy "weight_logs_delete_own"
   on public.weight_logs for delete
   using (auth.uid() = user_id);
 
 -- dose_logs
 alter table public.dose_logs enable row level security;
-create policy if not exists "dose_logs_select_own"
+drop policy if exists "dose_logs_select_own" on public.dose_logs;
+create policy "dose_logs_select_own"
   on public.dose_logs for select
   using (auth.uid() = user_id);
-create policy if not exists "dose_logs_insert_own"
+drop policy if exists "dose_logs_insert_own" on public.dose_logs;
+create policy "dose_logs_insert_own"
   on public.dose_logs for insert
   with check (auth.uid() = user_id);
-create policy if not exists "dose_logs_update_own"
+drop policy if exists "dose_logs_update_own" on public.dose_logs;
+create policy "dose_logs_update_own"
   on public.dose_logs for update
   using (auth.uid() = user_id);
-create policy if not exists "dose_logs_delete_own"
+drop policy if exists "dose_logs_delete_own" on public.dose_logs;
+create policy "dose_logs_delete_own"
   on public.dose_logs for delete
   using (auth.uid() = user_id);
 
 -- pantry_items
 alter table public.pantry_items enable row level security;
-create policy if not exists "pantry_items_select_own"
+drop policy if exists "pantry_items_select_own" on public.pantry_items;
+create policy "pantry_items_select_own"
   on public.pantry_items for select
   using (auth.uid() = user_id);
-create policy if not exists "pantry_items_insert_own"
+drop policy if exists "pantry_items_insert_own" on public.pantry_items;
+create policy "pantry_items_insert_own"
   on public.pantry_items for insert
   with check (auth.uid() = user_id);
-create policy if not exists "pantry_items_update_own"
+drop policy if exists "pantry_items_update_own" on public.pantry_items;
+create policy "pantry_items_update_own"
   on public.pantry_items for update
   using (auth.uid() = user_id);
-create policy if not exists "pantry_items_delete_own"
+drop policy if exists "pantry_items_delete_own" on public.pantry_items;
+create policy "pantry_items_delete_own"
   on public.pantry_items for delete
   using (auth.uid() = user_id);
 
 -- meal_plans
 alter table public.meal_plans enable row level security;
-create policy if not exists "meal_plans_select_own"
+drop policy if exists "meal_plans_select_own" on public.meal_plans;
+create policy "meal_plans_select_own"
   on public.meal_plans for select
   using (auth.uid() = user_id);
-create policy if not exists "meal_plans_insert_own"
+drop policy if exists "meal_plans_insert_own" on public.meal_plans;
+create policy "meal_plans_insert_own"
   on public.meal_plans for insert
   with check (auth.uid() = user_id);
-create policy if not exists "meal_plans_update_own"
+drop policy if exists "meal_plans_update_own" on public.meal_plans;
+create policy "meal_plans_update_own"
   on public.meal_plans for update
   using (auth.uid() = user_id);
-create policy if not exists "meal_plans_delete_own"
+drop policy if exists "meal_plans_delete_own" on public.meal_plans;
+create policy "meal_plans_delete_own"
   on public.meal_plans for delete
   using (auth.uid() = user_id);
 
 -- shopping_lists
 alter table public.shopping_lists enable row level security;
-create policy if not exists "shopping_lists_select_own"
+drop policy if exists "shopping_lists_select_own" on public.shopping_lists;
+create policy "shopping_lists_select_own"
   on public.shopping_lists for select
   using (auth.uid() = user_id);
-create policy if not exists "shopping_lists_insert_own"
+drop policy if exists "shopping_lists_insert_own" on public.shopping_lists;
+create policy "shopping_lists_insert_own"
   on public.shopping_lists for insert
   with check (auth.uid() = user_id);
-create policy if not exists "shopping_lists_update_own"
+drop policy if exists "shopping_lists_update_own" on public.shopping_lists;
+create policy "shopping_lists_update_own"
   on public.shopping_lists for update
   using (auth.uid() = user_id);
-create policy if not exists "shopping_lists_delete_own"
+drop policy if exists "shopping_lists_delete_own" on public.shopping_lists;
+create policy "shopping_lists_delete_own"
   on public.shopping_lists for delete
   using (auth.uid() = user_id);
 
