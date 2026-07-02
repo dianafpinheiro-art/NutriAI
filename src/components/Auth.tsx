@@ -15,11 +15,9 @@ export default function Auth({ onSession, locale }: AuthProps) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-
-  const requiredInviteCode = import.meta.env.VITE_SIGNUP_INVITE_CODE?.trim();
-  const requiresInviteCode = Boolean(requiredInviteCode);
+  const [isSignUp, setIsSignUp] = useState(() => {
+    return new URLSearchParams(window.location.search).get('signup') === '1';
+  });
 
   const handleAuth = async (e: FormEvent) => {
     e.preventDefault();
@@ -29,10 +27,6 @@ export default function Auth({ onSession, locale }: AuthProps) {
       const normalizedEmail = email.trim().toLowerCase();
 
       if (isSignUp) {
-        if (requiresInviteCode && inviteCode.trim() !== requiredInviteCode) {
-          throw new Error('Codigo de convite invalido.');
-        }
-
         const { error, data } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
@@ -105,24 +99,6 @@ export default function Auth({ onSession, locale }: AuthProps) {
             </div>
           </div>
 
-          {isSignUp && requiresInviteCode && (
-            <div>
-              <label className="text-xs font-heading font-bold text-stone-700 block mb-1.5">Codigo de convite</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  required
-                  autoComplete="off"
-                  className="w-full text-sm pl-10 pr-3 py-2.5 outline-none border border-stone-200 rounded-xl bg-stone-50 focus:border-pink-300 focus:bg-white transition-all font-medium"
-                  placeholder="Codigo para testar"
-                />
-              </div>
-            </div>
-          )}
-
           <button
             type="submit"
             disabled={loading}
@@ -135,7 +111,8 @@ export default function Auth({ onSession, locale }: AuthProps) {
 
         <div className="text-center border-t border-stone-100 pt-5">
           <button
-            onClick={() => setIsSignUp(!isSignUp)}
+            type="button"
+            onClick={() => setIsSignUp((current) => !current)}
             className="text-xs font-bold text-pink-500 hover:text-purple-500 transition-colors"
           >
             {isSignUp ? 'Ja tem uma conta? Faca login' : 'Ainda nao tem conta? Crie uma agora'}
