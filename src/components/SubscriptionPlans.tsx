@@ -1,19 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Star, Check, Zap, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { authFetch } from "../authFetch";
 import { startTrial } from "../dataHooks";
 import { t } from "../i18n";
 import type { Locale } from "../types";
 
 interface SubscriptionPlansProps {
   userId: string;
+  accessToken: string;
   locale: Locale;
   onClose: () => void;
   currentStatus?: string; // 'free' | 'trial' | 'active' | 'trial_expired'
 }
 
-export default function SubscriptionPlans({ userId, locale, onClose, currentStatus }: SubscriptionPlansProps) {
+export default function SubscriptionPlans({ userId, accessToken, locale, onClose, currentStatus }: SubscriptionPlansProps) {
   const [loading, setLoading] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -59,10 +59,16 @@ export default function SubscriptionPlans({ userId, locale, onClose, currentStat
     setCheckoutUrl(null);
     setCheckoutError(null);
     try {
-      await startTrial(userId);
-      const res = await authFetch("/api/payments/subscription", {
+      if (!accessToken) {
+        throw new Error("Sessao expirada. Saia e entre novamente para continuar.");
+      }
+
+      const res = await fetch("/api/payments/subscription", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ plan }),
       });
       const data = await res.json();
@@ -71,6 +77,9 @@ export default function SubscriptionPlans({ userId, locale, onClose, currentStat
       }
       if (data.checkoutUrl) {
         setCheckoutUrl(data.checkoutUrl);
+        startTrial(userId).catch((err) => {
+          console.error("[SubscriptionPlans] trial update failed:", err?.message || err);
+        });
         toast.success("Checkout criado", {
           description: "Se a pagina nao abrir sozinha, toque no botao abaixo.",
         });

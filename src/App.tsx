@@ -222,21 +222,21 @@ export default function App() {
     );
   };
 
-  if (!session) {
-    return <Auth onSession={(session) => setSession(session)} locale={locale} />;
-  }
-
-  const userId = session.user.id;
+  const userId = session?.user.id ?? "";
   const paywall = usePaywall(userId);
 
   useEffect(() => {
-    if (paywall.status === "free" || paywall.status === "trial_expired") {
+    if (session && (paywall.status === "free" || paywall.status === "trial_expired")) {
       const timer = setTimeout(() => {
         setShowSubscriptionPlans(true);
       }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [paywall.status]);
+  }, [session, paywall.status]);
+
+  if (!session) {
+    return <Auth onSession={(session) => setSession(session)} locale={locale} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-800 pb-20 portrait-safe font-body">
@@ -507,6 +507,7 @@ export default function App() {
       {showSubscriptionPlans && (
         <SubscriptionPlans
           userId={userId}
+          accessToken={session.access_token}
           locale={locale}
           onClose={() => setShowSubscriptionPlans(false)}
           currentStatus={paywall.status}
