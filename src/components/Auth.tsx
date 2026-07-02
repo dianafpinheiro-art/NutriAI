@@ -19,7 +19,7 @@ export default function Auth({ onSession, locale }: AuthProps) {
   const [isSignUp, setIsSignUp] = useState(false);
 
   const requiredInviteCode = import.meta.env.VITE_SIGNUP_INVITE_CODE?.trim();
-  const canSignUp = Boolean(requiredInviteCode);
+  const requiresInviteCode = Boolean(requiredInviteCode);
 
   const handleAuth = async (e: FormEvent) => {
     e.preventDefault();
@@ -29,7 +29,7 @@ export default function Auth({ onSession, locale }: AuthProps) {
       const normalizedEmail = email.trim().toLowerCase();
 
       if (isSignUp) {
-        if (!canSignUp || inviteCode.trim() !== requiredInviteCode) {
+        if (requiresInviteCode && inviteCode.trim() !== requiredInviteCode) {
           throw new Error('Codigo de convite invalido.');
         }
 
@@ -105,7 +105,7 @@ export default function Auth({ onSession, locale }: AuthProps) {
             </div>
           </div>
 
-          {isSignUp && (
+          {isSignUp && requiresInviteCode && (
             <div>
               <label className="text-xs font-heading font-bold text-stone-700 block mb-1.5">Codigo de convite</label>
               <div className="relative">
@@ -134,16 +134,12 @@ export default function Auth({ onSession, locale }: AuthProps) {
         </form>
 
         <div className="text-center border-t border-stone-100 pt-5">
-          {canSignUp ? (
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-xs font-bold text-pink-500 hover:text-purple-500 transition-colors"
-            >
-              {isSignUp ? 'Ja tem uma conta? Faca login' : 'Ainda nao tem conta? Crie uma agora'}
-            </button>
-          ) : (
-            <p className="text-xs font-bold text-stone-400">Acesso por convite. Peca sua conta de teste.</p>
-          )}
+          <button
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="text-xs font-bold text-pink-500 hover:text-purple-500 transition-colors"
+          >
+            {isSignUp ? 'Ja tem uma conta? Faca login' : 'Ainda nao tem conta? Crie uma agora'}
+          </button>
         </div>
       </div>
     </div>
