@@ -52,7 +52,7 @@ export default function MounjaroMonitor({ treatmentType, userId }: MounjaroMonit
         <Syringe className="w-8 h-8 mx-auto text-stone-300 mb-2" />
         <h4 className="font-heading font-extrabold text-stone-700 text-sm">Monitor de Medicações (Mounjaro/Ozempic) Inativo</h4>
         <p className="text-xs text-stone-500 max-w-xs mx-auto mt-1">
-          Habilite seu tratamento clínico no fluxo de preferências de perfil para registrar suas doses semanais e rodízio de locais de aplicação.
+          Ative seu tratamento no perfil para registrar suas doses semanais e o rodízio de locais de aplicação.
         </p>
       </div>
     );

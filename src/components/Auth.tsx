@@ -97,7 +97,7 @@ export default function Auth({ onSession, locale }: AuthProps) {
           <div className="text-center">
             <h1 className="text-2xl font-extrabold tracking-tight text-stone-800 font-heading">PersonalDiet</h1>
             <p className="text-xs text-stone-500 font-medium mt-1">
-              Use o que voce tem na geladeira e economize dinheiro.
+              Cozinhe com o que você tem na geladeira e economize.
             </p>
           </div>
         </div>

@@ -121,7 +121,7 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
             </div>
             <div>
               <h2 id="whoami-title" className="text-lg font-extrabold tracking-tight text-stone-800 font-heading">Quem Sou Eu?</h2>
-              <p className="text-xs text-stone-400 font-semibold uppercase tracking-wider">Perfil Clínico e Alimentar Individual de Saúde</p>
+              <p className="text-xs text-stone-400 font-semibold uppercase tracking-wider">Seu Perfil Alimentar e Preferências</p>
             </div>
           </div>
           {onClose && (
@@ -217,7 +217,7 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
               <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-2xl text-indigo-800 text-[11px] leading-relaxed flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold">Aviso Clínico de Suporte:</span> Ao ativar o protocolo {clinicalTreatment.toUpperCase()}, o PersonalDiet adaptará os algoritmos de geração de receitas para omitir frituras, açúcares simples e gorduras saturadas excessivas, prevenindo enjôos agudos e protegendo sua saúde.
+                  <span className="font-bold">Aviso importante:</span> Ao ativar o protocolo {clinicalTreatment.toUpperCase()}, o PersonalDiet adaptará as receitas para evitar frituras, açúcares simples e gorduras pesadas — prevenindo enjôos e cuidando de você.
                 </div>
               </div>
             )}
@@ -379,7 +379,7 @@ export default function WhoAmI({ preferences, onSave, onClose, isOpen }: WhoAmIP
             <div className="flex justify-between text-[9px] text-stone-400 font-bold">
               <span>1500 ml (Mínimo)</span>
               <span>2500 ml (Moderado)</span>
-              <span>3500 ml (Alvo Clínico Tirzepatida)</span>
+              <span>3500 ml (Recomendado para Tirzepatida)</span>
               <span>5000 ml</span>
             </div>
           </div>

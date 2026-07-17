@@ -1,11 +1,8 @@
-const CACHE_NAME = "nutriai-cache-v6";
+const CACHE_NAME = "nutriai-cache-v7";
 const ASSETS = [
   "/",
   "/index.html",
-  "/src/main.tsx",
-  "/src/App.tsx",
-  "/src/index.css",
-  "/src/types.ts"
+  "/manifest.json",
 ];
 
 // Install Event

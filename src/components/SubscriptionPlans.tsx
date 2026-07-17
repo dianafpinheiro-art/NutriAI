@@ -160,11 +160,11 @@ export default function SubscriptionPlans({ userId, accessToken, locale, onClose
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {isUrgent && (
+          {isUrgent ? (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs font-bold text-center">
               {t(locale, "subscriptionTrialExpired")}
             </div>
-          )}
+          ) : null}
 
           {checkoutUrl && (
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">

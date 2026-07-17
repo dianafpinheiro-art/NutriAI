@@ -13,6 +13,7 @@ interface MealPlannerProps {
   preferences: UserPreferences;
   pantry: PantryIngredient[];
   externalRecipes: RecipeResult[] | null;
+  externalShoppingItems?: ShoppingItem[] | null;
   onClearExternalRecipes: () => void;
   userId: string;
   isPremium: boolean;
@@ -20,7 +21,34 @@ interface MealPlannerProps {
   onShowPaywall: () => void;
 }
 
-export default function MealPlanner({ preferences, pantry, externalRecipes, onClearExternalRecipes, userId, isPremium, locale, onShowPaywall }: MealPlannerProps) {
+function mergeRecipes(current: RecipeResult[], incoming: RecipeResult[]): RecipeResult[] {
+  const seen = new Set(current.map((recipe) => recipe.title.trim().toLowerCase()));
+  const next = [...current];
+  incoming.forEach((recipe) => {
+    const key = recipe.title.trim().toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      next.push(recipe);
+    }
+  });
+  return next;
+}
+
+function mergeShoppingItems(current: ShoppingItem[], incoming: ShoppingItem[]): ShoppingItem[] {
+  const next = [...current];
+  incoming.forEach((item) => {
+    const existing = next.find((currentItem) => currentItem.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+    if (existing) {
+      existing.quantity = existing.quantity === item.quantity ? existing.quantity : `${existing.quantity} + ${item.quantity}`;
+      existing.checked = false;
+      return;
+    }
+    next.push(item);
+  });
+  return next;
+}
+
+export default function MealPlanner({ preferences, pantry, externalRecipes, externalShoppingItems, onClearExternalRecipes, userId, isPremium, locale, onShowPaywall }: MealPlannerProps) {
   const [menuLoading, setMenuLoading] = useState(false);
   const [mealPlan, setMealPlan] = useState<DayMealPlan[]>([]);
   const [recipesList, setRecipesList] = useState<RecipeResult[]>([]);
@@ -51,13 +79,24 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
   });
 
   useEffect(() => {
-    if (externalRecipes && externalRecipes.length > 0) {
-      setRecipesList(externalRecipes);
-      upsertMealPlan(userId, mealPlan, externalRecipes).catch(() => {});
-      setActiveSegment("recipes");
+    const hasRecipes = Boolean(externalRecipes && externalRecipes.length > 0);
+    const hasShopping = Boolean(externalShoppingItems && externalShoppingItems.length > 0);
+
+    if (hasRecipes || hasShopping) {
+      if (hasRecipes) {
+        const nextRecipes = mergeRecipes(recipesList, externalRecipes!);
+        setRecipesList(nextRecipes);
+        upsertMealPlan(userId, mealPlan, nextRecipes).catch(() => {});
+      }
+      if (hasShopping) {
+        const nextShopping = mergeShoppingItems(shoppingList, externalShoppingItems!);
+        setShoppingList(nextShopping);
+        upsertShoppingList(userId, nextShopping).catch(() => {});
+      }
+      setActiveSegment(hasRecipes ? "recipes" : "shopping");
       onClearExternalRecipes();
     }
-  }, [externalRecipes]);
+  }, [externalRecipes, externalShoppingItems]);
 
   const generateMealPlan = async () => {
     if (!isPremium) {
@@ -135,7 +174,7 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("Erro completo na geração do plano de refeições:", message);
-      toast.error("Erro ao conectar ao motor clínico.\n\n" + message);
+      toast.error("Erro ao gerar seu cardápio.\n\n" + message);
     } finally {
       setMenuLoading(false);
     }
@@ -172,7 +211,7 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
     csvContent += "ID;Data;Quantidade (ml)\n";
     csvContent += "\n";
 
-    csvContent += "MONITORAMENTO DE MEDICAMENTO (Mounjaro/Ozempic)\n";
+    csvContent += "CONTROLE DE MEDICAÇÃO (Mounjaro/Ozempic)\n";
     csvContent += "ID;Data;Medicação;Dose (mg);Local de Aplicação\n";
     csvContent += "\n";
 
@@ -238,7 +277,7 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
         <div className="flex items-center gap-2">
           <AlertOctagon className="w-4 h-4 text-amber-600 shrink-0" />
           <div className="leading-normal">
-            <strong>Filtro Clínico Ativo:</strong> Exclusão de {preferences.excludedIngredients.join(", ") || "nenhum ingrediente"}. 
+            <strong>Filtros ativos:</strong> Excluindo {preferences.excludedIngredients.join(", ") || "nenhum ingrediente"}.
             {preferences.clinicalRestrictions.includes("celiac") && " Gluten-free obrigatório."}
             {preferences.clinicalRestrictions.includes("lactose") && " Lactose-free obrigatório."}
           </div>
@@ -378,9 +417,15 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
                       <span className="text-[10px] text-stone-400 font-bold block mt-0.5">Tempo Prep: {recipe.prepTime}</span>
                     </div>
                     <span className="shrink-0 bg-green-50 text-green-700 border border-green-100 font-bold text-[10px] px-2.5 py-1 rounded-full">
-                      🔥 {recipe.matchPercentage}% Uso Dispensa
+                      {recipe.sourcePlatform ? `Importada: ${recipe.sourcePlatform}` : `${recipe.matchPercentage}% Uso Dispensa`}
                     </span>
                   </div>
+
+                  {recipe.nutritionSummary && (
+                    <div className="text-[11px] bg-green-50 border border-green-100 text-green-800 rounded-2xl p-3">
+                      {recipe.nutritionSummary}
+                    </div>
+                  )}
 
                   <div>
                     <h5 className="text-[10px] uppercase font-bold text-stone-400 tracking-wider mb-1.5">Ingredientes</h5>
@@ -402,6 +447,14 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
                       ))}
                     </ol>
                   </div>
+
+                  {(recipe.confidence || (recipe.missingInfo && recipe.missingInfo.length > 0)) && (
+                    <div className="border-t border-stone-50 pt-3 text-[11px] text-stone-500 leading-relaxed">
+                      {recipe.servings && <span className="font-bold text-stone-600">{recipe.servings} porcoes. </span>}
+                      {recipe.confidence && <span>Confianca da importacao: {recipe.confidence}. </span>}
+                      {recipe.missingInfo && recipe.missingInfo.length > 0 && <span>Revisar: {recipe.missingInfo.join(", ")}.</span>}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -468,7 +521,7 @@ export default function MealPlanner({ preferences, pantry, externalRecipes, onCl
                     </div>
                   </div>
                   <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 bg-stone-100 text-stone-600 rounded-full">
-                    {item.category === "cafe-da-manha" ? "Café" : item.category === "almoco" ? "Almoço" : item.category === "lanche" ? "Lanche" : "Jantar"}
+                    {item.category === "cafe-da-manha" ? "Café" : item.category === "almoco" ? "Almoço" : item.category === "lanche" ? "Lanche" : item.category === "receita-importada" ? "Receita" : "Jantar"}
                   </span>
                 </div>
               ))}

@@ -9,3 +9,7 @@ coverage/
 .env.*
 !.env.example
 .vercel
+.env*
+
+.claude/
+criativos-videos/

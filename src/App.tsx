@@ -9,7 +9,7 @@ import {
   Crown,
   X
 } from "lucide-react";
-import { UserPreferences, PantryIngredient, RecipeResult, Locale, DietType, ClinicalTreatment } from "./types";
+import { UserPreferences, PantryIngredient, RecipeResult, ShoppingItem, Locale, DietType, ClinicalTreatment } from "./types";
 import type { Session } from "@supabase/supabase-js";
 import { Analytics } from "@vercel/analytics/react";
 import { localeLabels, t } from "./i18n";
@@ -30,6 +30,7 @@ import SymptomTracker from "./components/SymptomTracker";
 import WeightTracker from "./components/WeightTracker";
 import MounjaroMonitor from "./components/MounjaroMonitor";
 import PantryScanner from "./components/PantryScanner";
+import RecipeImporter from "./components/RecipeImporter";
 import MealPlanner from "./components/MealPlanner";
 import InstallPwaBanner from "./components/InstallPwaBanner";
 import ReminderCenter from "./components/ReminderCenter";
@@ -69,8 +70,21 @@ export default function App() {
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
   const locale = preferences.locale ?? "pt";
 
+  // Detect return from Mercado Pago checkout
+  const [checkoutReturn, setCheckoutReturn] = useState<{ type: string | null }>({ type: null });
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.startsWith("/subscription/")) {
+      const result = path.split("/")[2] || null; // success | failure | pending
+      setCheckoutReturn({ type: result });
+      // Clean URL without reloading
+      window.history.replaceState({}, document.title, "/");
+    }
+  }, []);
+
   const [pantry, setPantry] = useState<PantryIngredient[]>([]);
   const [externalRecipes, setExternalRecipes] = useState<RecipeResult[] | null>(null);
+  const [externalShoppingItems, setExternalShoppingItems] = useState<ShoppingItem[] | null>(null);
   const [showPreferencesEditor, setShowPreferencesEditor] = useState(false);
   const [showWhoAmI, setShowWhoAmI] = useState(false);
   const [showSubscriptionPlans, setShowSubscriptionPlans] = useState(false);
@@ -126,8 +140,26 @@ export default function App() {
       }, 800);
     }
 
-    // Trigger Sonner PWA interactive notification for update availability on second startup
-    setTimeout(() => {
+    // Show update toast ONLY when a new Service Worker is actually waiting
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready.then((reg) => {
+        if (reg.waiting) {
+          showToastUpdate();
+        }
+        reg.addEventListener("updatefound", () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener("statechange", () => {
+              if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                showToastUpdate();
+              }
+            });
+          }
+        });
+      });
+    }
+
+    function showToastUpdate() {
       toast(t(locale, "updateAvailable"), {
         description: t(locale, "updateDescription"),
         action: {
@@ -141,12 +173,23 @@ export default function App() {
         },
         duration: 10000,
       });
-    }, 3000);
+    }
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Toast feedback on checkout return
+  useEffect(() => {
+    if (checkoutReturn.type === "success") {
+      toast.success("🎉 Pagamento aprovado! Seu Premium está ativo.");
+    } else if (checkoutReturn.type === "failure") {
+      toast.error("❌ Pagamento não foi aprovado. Tente novamente quando quiser.");
+    } else if (checkoutReturn.type === "pending") {
+      toast.info("⏳ Pagamento pendente. Assim que for confirmado, seu Premium será ativado.");
+    }
+  }, [checkoutReturn]);
 
   const handleUpdatePreferences = (updated: Partial<UserPreferences>) => {
     const next = { ...preferences, ...updated };
@@ -221,6 +264,11 @@ export default function App() {
         }
       }
     );
+  };
+
+  const handleImportedRecipe = (recipe: RecipeResult, shoppingItems: ShoppingItem[]) => {
+    setExternalRecipes([recipe]);
+    setExternalShoppingItems(shoppingItems);
   };
 
   const userId = session?.user.id ?? "";
@@ -474,11 +522,22 @@ export default function App() {
               onShowPaywall={() => setShowSubscriptionPlans(true)}
             />
 
+            <RecipeImporter
+              preferences={preferences}
+              isPremium={paywall.isPremium}
+              onShowPaywall={() => setShowSubscriptionPlans(true)}
+              onImported={handleImportedRecipe}
+            />
+
             <MealPlanner 
               preferences={preferences}
               pantry={pantry}
               externalRecipes={externalRecipes}
-              onClearExternalRecipes={() => setExternalRecipes(null)}
+              externalShoppingItems={externalShoppingItems}
+              onClearExternalRecipes={() => {
+                setExternalRecipes(null);
+                setExternalShoppingItems(null);
+              }}
               userId={userId}
               isPremium={paywall.isPremium}
               locale={locale}
@@ -492,7 +551,7 @@ export default function App() {
       </main>
 
       <footer className="text-center py-6 mt-12 text-[10px] text-stone-400 font-bold border-t border-stone-100 flex flex-col items-center gap-1.5 max-w-sm mx-auto p-4 leading-normal">
-        <div>PersonalDiet — Seu Organizador Pessoal de Receitas e Dietas</div>
+        <div>PersonalDiet — Cozinhe com o que você tem, sem desperdício</div>
         <div className="bg-stone-100 px-2 py-0.5 rounded text-stone-500 border border-stone-200/40">v3.0.0-pwa (Economia & Inteligência)</div>
         <MedicalDisclaimer locale={locale} className="mt-2" />
       </footer>

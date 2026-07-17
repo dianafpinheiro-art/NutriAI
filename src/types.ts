@@ -72,6 +72,12 @@ export interface RecipeResult {
   instructions: string[];
   prepTime: string;
   matchPercentage: number;
+  nutritionSummary?: string;
+  sourcePlatform?: string;
+  sourceUrl?: string | null;
+  confidence?: "alta" | "media" | "baixa";
+  missingInfo?: string[];
+  servings?: number;
 }
 
 export interface ShoppingItem {

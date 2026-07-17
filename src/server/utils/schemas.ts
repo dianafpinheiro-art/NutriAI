@@ -32,6 +32,19 @@ export const AnalyzeLabelsSchema = z.object({
   restrictionType: z.enum(["celiac", "lactose"]),
 });
 
+export const ImportRecipeSchema = z.object({
+  url: z.string().trim().max(2000).optional(),
+  texto: z.string().trim().max(12000).optional(),
+  preferences: z.object({
+    excludedIngredients: z.array(z.string()).default([]),
+    clinicalRestrictions: z.array(z.string()).default([]),
+    clinicalTreatment: z.string().default("none"),
+    dietType: z.string().default("none"),
+  }).passthrough().optional(),
+}).refine((body) => Boolean(body.url || body.texto), {
+  message: "Envie um link ou cole o texto da receita.",
+});
+
 export const CreateSubscriptionSchema = z.object({
   plan: z.enum(["monthly", "annual"]),
   email: z.string().email().optional(),
@@ -46,5 +59,6 @@ export type GenerateMenuInput = z.infer<typeof GenerateMenuSchema>;
 export type ParsePrescriptionInput = z.infer<typeof ParsePrescriptionSchema>;
 export type AnalyzePantryImageInput = z.infer<typeof AnalyzePantryImageSchema>;
 export type AnalyzeLabelsInput = z.infer<typeof AnalyzeLabelsSchema>;
+export type ImportRecipeInput = z.infer<typeof ImportRecipeSchema>;
 export type CreateSubscriptionInput = z.infer<typeof CreateSubscriptionSchema>;
 export type WebhookInput = z.infer<typeof WebhookSchema>;

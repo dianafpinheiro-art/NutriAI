@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PersonalDiet — Pack de Criativos BUDO</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink-400: #f472b6; --pink-500: #ec4899; --pink-600: #db2777;
+    --purple-400: #c084fc; --purple-500: #a855f7;
+    --stone-50: #fafaf9; --stone-100: #f5f5f4; --stone-200: #e7e5e4;
+    --stone-300: #d6d3d1; --stone-400: #a8a29e; --stone-600: #57534e; --stone-800: #292524;
+    --emerald-500: #10b981; --emerald-600: #059669;
+    --red-500: #ef4444; --amber-500: #f59e0b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Nunito', sans-serif; background: var(--stone-100); color: var(--stone-800); line-height: 1.6; }
+  .font-heading { font-family: 'Quicksand', sans-serif; font-weight: 700; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* HERO */
+  .hero { background: linear-gradient(135deg, #fce7f3 0%, #f3e8ff 50%, #fce7f3 100%); padding: 3rem 2rem; text-align: center; }
+  .hero-badge { display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; color: var(--pink-600); background: white; padding: 0.3rem 0.8rem; border-radius: 999px; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(236,72,153,0.15); }
+  .hero h1 { font-family: 'Quicksand'; font-size: 2.2rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+  .hero p { color: var(--stone-600); font-size: 0.9rem; max-width: 500px; margin: 0 auto; }
+
+  /* SECTION */
+  .section { max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+  .section-tag { display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--pink-600); background: #fce7f3; padding: 0.25rem 0.75rem; border-radius: 999px; margin-bottom: 0.5rem; }
+  .section h2 { font-family: 'Quicksand'; font-size: 1.4rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .section-desc { color: var(--stone-600); font-size: 0.85rem; margin-bottom: 1.5rem; }
+
+  /* HERO IMAGES */
+  .hero-images { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+  .hero-img-wrap { position: relative; border-radius: 1rem; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+  .hero-img-wrap img { width: 100%; display: block; }
+  .hero-img-label { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; font-size: 0.7rem; font-weight: 700; padding: 1.5rem 0.75rem 0.75rem; }
+
+  /* PROMPT CARD */
+  .prompt-card { background: white; border-radius: 1rem; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid var(--stone-200); margin-bottom: 1.5rem; }
+  .prompt-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--stone-200); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+  .prompt-header h3 { font-family: 'Quicksand'; font-size: 1rem; font-weight: 700; }
+  .prompt-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .badge { font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .badge-pink { background: #fce7f3; color: var(--pink-600); }
+  .badge-purple { background: #f3e8ff; color: var(--purple-500); }
+  .badge-green { background: #d1fae5; color: var(--emerald-600); }
+  .badge-blue { background: #dbeafe; color: #2563eb; }
+  .badge-amber { background: #fef3c7; color: var(--amber-500); }
+  .badge-dark { background: var(--stone-800); color: white; }
+
+  .prompt-body { padding: 1.25rem; }
+  .prompt-section { margin-bottom: 1rem; }
+  .prompt-section:last-child { margin-bottom: 0; }
+  .prompt-label { font-family: 'JetBrains Mono'; font-size: 0.7rem; font-weight: 700; color: var(--pink-600); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .prompt-content { font-size: 0.82rem; color: var(--stone-600); line-height: 1.7; padding-left: 0.75rem; border-left: 3px solid var(--stone-200); }
+  .prompt-content strong { color: var(--stone-800); }
+
+  /* COPY CARD */
+  .copy-card { background: var(--stone-800); color: #e7e5e4; border-radius: 1rem; padding: 1.5rem; margin-top: 1rem; }
+  .copy-card .prompt-label { color: var(--pink-400); }
+  .copy-card .prompt-content { color: #d6d3d1; border-left-color: var(--stone-600); }
+  .copy-card .prompt-content strong { color: white; }
+
+  /* QUIZ */
+  .quiz-frame { background: linear-gradient(180deg, #fffbeb, #fef3c7); border-radius: 1rem; padding: 1.5rem; border: 1px solid #fde68a; margin-bottom: 1rem; }
+  .quiz-frame h4 { font-family: 'Quicksand'; font-size: 0.95rem; margin-bottom: 0.75rem; color: #92400e; }
+  .quiz-option { background: white; border: 2px solid var(--stone-200); border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.8rem; font-weight: 700; color: var(--stone-600); display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .quiz-option.active { border-color: var(--pink-500); background: #fce7f3; color: var(--pink-600); }
+  .quiz-radio { width: 18px; height: 18px; border: 2px solid var(--stone-400); border-radius: 50%; flex-shrink: 0; }
+  .quiz-option.active .quiz-radio { border-color: var(--pink-500); background: var(--pink-500); }
+
+  /* STORYBOARD */
+  .storyboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+  .frame { background: white; border-radius: 0.75rem; overflow: hidden; border: 1px solid var(--stone-200); }
+  .frame-time { background: var(--stone-800); color: white; font-family: 'JetBrains Mono'; font-size: 0.65rem; font-weight: 700; padding: 0.3rem 0.6rem; }
+  .frame-content { padding: 0.75rem; font-size: 0.75rem; color: var(--stone-600); line-height: 1.5; }
+  .frame-content strong { color: var(--stone-800); display: block; margin-bottom: 0.2rem; font-size: 0.8rem; }
+
+  /* PALETTE */
+  .palette-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .color-chip { width: 70px; height: 70px; border-radius: 0.75rem; display: flex; align-items: flex-end; justify-content: center; padding: 0.3rem; font-size: 0.55rem; color: white; font-weight: 700; }
+
+  hr { border: none; border-top: 1px solid var(--stone-200); margin: 2rem 0; }
+
+  /* NOTE BOX */
+  .note-box { background: #fef2f2; border: 1px solid #fee2e2; border-radius: 0.75rem; padding: 1rem 1.25rem; margin-top: 1rem; }
+  .note-box h4 { font-family: 'Quicksand'; font-size: 0.85rem; color: #991b1b; margin-bottom: 0.3rem; }
+  .note-box p { font-size: 0.8rem; color: #b91c1c; }
+
+  /* CHECKLIST */
+  .checklist { background: white; border-radius: 0.75rem; padding: 1.25rem; border: 1px solid var(--stone-200); }
+  .checklist li { list-style: none; font-size: 0.8rem; color: var(--stone-600); padding: 0.3rem 0; padding-left: 1.5rem; position: relative; }
+  .checklist li::before { content: "☐"; position: absolute; left: 0; color: var(--pink-500); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">🎬 BUDO Framework · Meta Ads Pack</div>
+  <h1 class="font-heading">PersonalDiet — Criativos Profissionais</h1>
+  <p>4 prompts de vídeo estruturados com framework BUDO + Quiz interativo + Copy de anúncios. Agora com ângulo novo: importar receitas de TikTok/Reels/YouTube. R$ 30/dia · Instagram Reels 9:16.</p>
+</div>
+
+<!-- HERO IMAGES -->
+<div class="section">
+  <div class="hero-images">
+    <div class="hero-img-wrap">
+      <img src="https://v3b.fal.media/files/b/0aa0a299/W0mb2y-9aM31dde_TUjXJ_qJaIs50y.png" alt="Hero — mulher na cozinha com app">
+      <div class="hero-img-label">Hero Image A — Lifestyle / Aspiracional</div>
+    </div>
+    <div class="hero-img-wrap">
+      <img src="https://v3b.fal.media/files/b/0aa0a29b/velYKW_RQODVJOuwiFbAt_c3c9KQc7.png" alt="Hero — macro food">
+      <div class="hero-img-label">Hero Image B — Food Appeal / Macro</div>
+    </div>
+  </div>
+  <p style="font-size: 0.75rem; color: var(--stone-400); text-align: center; margin-top: 0.5rem;">
+    ↑ Imagens de referência geradas para alinhar o mood visual. Use como <code>medias: [role=image]</code> ao gerar vídeo.
+  </p>
+</div>
+
+<!-- ===================== VÍDEO 1 ===================== -->
+<div class="section">
+  <span class="section-tag">Criativo A · BUDO Motion Design + Social Hook</span>
+  <h2 class="font-heading">📱 Vídeo 1: "App Demo Cinematic" (10s · 9:16)</h2>
+  <p class="section-desc">
+    Skills aplicadas: <code>budo-motion-design</code> (app demo) + <code>budo-social-hook</code> (hook #5 Extreme Close-Up + #15 Curiosity Gap).<br>
+    Estilo: Clean Minimal com acentos rosa/roxo da marca. Registrador autêntico, não "commercial".
+  </p>
+
+  <div class="prompt-card">
+    <div class="prompt-header">
+      <h3>Prompt BUDO Completo — "App Demo Cinematic"</h3>
+      <div class="prompt-badges">
+        <span class="badge badge-pink">Hook: #5 + #15</span>
+        <span class="badge badge-purple">Motion Design</span>
+        <span class="badge badge-dark">9:16 · 10s</span>
+      </div>
+    </div>
+    <div class="prompt-body">
+
+      <div class="prompt-section">
+        <div class="prompt-label">[GENRE / STYLE]</div>
+        <div class="prompt-content">
+          Genre: auto. Photoreal motion design, <strong>Clean Minimal</strong> style with Pastel Tech accents.<br>
+          QUALITY VOCAB: 4K, crisp detail, photoreal hand and device, ray-traced reflections on phone screen, mathematical motion easing, <strong>Apple-keynote-grade polish</strong>.<br>
+          Palette: clean white background (#fafaf9), vibrant pink brand accent (#ec4899), soft purple (#a855f7), generous whitespace.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[OPENING HOOK — 0 to 2s]</div>
+        <div class="prompt-content">
+          Hook: <strong>#5 Extreme Close-Up Zoom + #15 Curiosity Gap</strong>.<br>
+          0.0–0.3s: Extreme macro on an unrecognizable swirling pattern — abstract pink and purple particles slowly rotating on white. Could be anything.<br>
+          0.3–0.8s: Camera begins rapid zoom-out. Text overlay fades in (bold sans-serif, white with dark outline): <em>"Você não sabe o que comer?"</em><br>
+          0.8–1.5s: Zoom-out completes — reveals it's a phone screen showing the PersonalDiet app, meal plan visible. Hand holding phone enters frame from bottom.<br>
+          1.5–2.0s: Text completes: <em>"A IA decide pra você."</em> Hand taps screen decisively at 1.8s.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[MAIN ACTION — 2s to 7s]</div>
+        <div class="prompt-content">
+          Phone screen illuminates with vibrant pink brand color on tap. App home screen visible with meal plan cards. Hand swipes upward; screen transitions (smooth morph, 0.5s) to show:<br>
+          <strong>2.5–3.5s:</strong> Meal plan screen — 4 meal cards stacking in (🍳 Café, 🥗 Almoço, 🍎 Lanche, 🍽️ Jantar) with calorie counts and ingredient tags.<br>
+          <strong>3.5–5.0s:</strong> Pantry Scanner — phone camera hovers over a fridge interior, AI detection boxes appear on ingredients (✨ scanning animation), identified items populate a list.<br>
+          <strong>5.0–6.5s:</strong> Recipe results — 3 recipe cards slide in from right with match percentages (98% match, 95% match, 92% match) and appetizing food thumbnails.<br>
+          <strong>6.5–7.0s:</strong> Quick cut to a macro beauty shot of a plated healthy meal (salmon + sweet potato + broccoli), steam rising, backlit.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[CAMERA]</div>
+        <div class="prompt-content">
+          Macro 90mm for the opening swirl (tight crop). Rapid crash-zoom out for the reveal. 35mm equivalent for the hand+phone interaction shots. Subtle push-in on the food macro. Gimbal-stabilized micro-movement throughout.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[LIGHTING]</div>
+        <div class="prompt-content">
+          Bright natural daylight from camera-front-left, soft. 4500K key. Single warm 3000K practical bounce from below the phone screen to add warmth to the hand. White seamless background for isolation shots.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[COLOR & GRADE]</div>
+        <div class="prompt-content">
+          Clean, neutral, slightly warm. Pink and purple brand accents pop against white background. Food macro gets full saturation (salmon pink, broccoli green, sweet potato orange). Rec. 709, 10-bit color.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[CLOSING BEAT — 8s to 10s]</div>
+        <div class="prompt-content">
+          Phone tilts slightly toward camera. Pink gradient CTA button appears on screen: <strong>"Assinar agora"</strong>. Below the phone, text fades in: <em>"R$ 19,90/mês · Garantia de 7 dias"</em>. Brand logo (PersonalDiet heart icon) top-center. Hold final 1.5s.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[IMPLIED AUDIO]</div>
+        <div class="prompt-content">
+          Soft digital "shimmer" at 0.3s (particles forming). Light tap at 1.8s (screen interaction). Subtle swipe-whoosh per transition (0.5s each). Ascending notification chime when recipes appear (5.0s). Sizzle sound implied on the food macro (6.5s). Soft brand chime on CTA appearance (8.0s).
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[TEXT OVERLAYS — max 3, max 8 words each]</div>
+        <div class="prompt-content">
+          1. <em>"Você não sabe o que comer?"</em> (0.3–1.5s)<br>
+          2. <em>"A IA decide pra você."</em> (1.5–2.5s)<br>
+          3. <em>"R$ 19,90/mês · Garantia de 7 dias"</em> (8.0–10s)
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[TECHNICAL]</div>
+        <div class="prompt-content">
+          resolution: 1080p; mode: std; genre: auto; aspect_ratio: 9:16; duration: 10;<br>
+          medias: [Hero Image A as role=image, app UI screenshot as role=image]
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="storyboard">
+    <div class="frame">
+      <div class="frame-time">0.0 – 0.3s</div>
+      <div class="frame-content"><strong>Macro Swirl</strong>Partículas rosa/roxo girando. Inreconhecível.</div>
+    </div>
+    <div class="frame">
+      <div class="frame-time">0.3 – 1.5s</div>
+      <div class="frame-content"><strong>Zoom-out + Texto</strong>"Você não sabe o que comer?" Phone revelado.</div>
+    </div>
+    <div class="frame">
+      <div class="frame-time">1.5 – 2.0s</div>
+      <div class="frame-content"><strong>Resposta + Tap</strong>"A IA decide pra você." Mão toca tela.</div>
+    </div>
+    <div class="frame">
+      <div class="frame-time">2.5 – 5.0s</div>
+      <div class="frame-content"><strong>App Flow</strong>Cardápio → Scanner de geladeira → Importar receita → Lista.</div>
+    </div>
+    <div class="frame">
+      <div class="frame-time">5.0 – 7.0s</div>
+      <div class="frame-content"><strong>Food Macro</strong>Beauty shot do prato pronto, steam, backlight.</div>
+    </div>
+    <div class="frame">
+      <div class="frame-time">8.0 – 10s</div>
+      <div class="frame-content"><strong>CTA Final</strong>Botão rosa + preço + garantia + logo.</div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ===================== VÍDEO 2 ===================== -->
+<div class="section">
+  <span class="section-tag">Criativo B · BUDO Food & Beverage + Social Hook</span>
+  <h2 class="font-heading">🥗 Vídeo 2: "Food Cinematic Trigger" (8s · 9:16)</h2>
+  <p class="section-desc">
+    Skills aplicadas: <code>budo-food-beverage</code> (appetite appeal) + <code>budo-social-hook</code> (hook #4 Unexpected Reveal + #15 Curiosity Gap).<br>
+    Este vídeo NÃO mostra o app. É puro <strong>appetite trigger</strong> → o scroll para pela comida, e o CTA leva pra landing.
+  </p>
+
+  <div class="prompt-card">
+    <div class="prompt-header">
+      <h3>Prompt BUDO Completo — "Food Cinematic Trigger"</h3>
+      <div class="prompt-badges">
+        <span class="badge badge-green">Hook: #4 + #15</span>
+        <span class="badge badge-amber">Food & Beverage</span>
+        <span class="badge badge-dark">9:16 · 8s</span>
+      </div>
+    </div>
+    <div class="prompt-body">
+
+      <div class="prompt-section">
+        <div class="prompt-label">[GENRE / STYLE]</div>
+        <div class="prompt-content">
+          Genre: drama. Photoreal food cinematography, <strong>Healthy / Wellness</strong> category.<br>
+          QUALITY VOCAB: 8K, hyper-detailed, every fiber visible, macro 90mm at 0.5m, shot on RED Komodo, 60fps slow-mo on the hero pour, motivated practical lighting, <strong>Michelin-quality food cinematography</strong>.<br>
+          Palette: warm morning light, vibrant fresh greens, deep salmon orange, cream ceramics, pink-purple ambient accent.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[OPENING HOOK — 0 to 2s]</div>
+        <div class="prompt-content">
+          Hook: <strong>#4 Unexpected Reveal + #15 Curiosity Gap</strong>.<br>
+          0.0–0.8s: Extreme macro on a texturesurface — blurred, warm, could be anything. Slow rotation. Backlight creating golden rim.<br>
+          0.8–1.5s: Camera pulls back rapidly — it's a grilled salmon fillet, perfectly seared, sitting on a white plate. Steam rises immediately visible in the backlight.<br>
+          1.5–2.0s: Text overlay: <em>"Isto é uma dieta?"</em> (bold, white with dark outline, held firmly).
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[HERO DISH]</div>
+        <div class="prompt-content">
+          Grilled salmon fillet (golden crust, moist interior), roasted sweet potato cubes with char marks, steamed broccoli with bright green color. Plated on white ceramic. Microgreens garnish. Single drizzle of olive oil.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[MONEY SHOT — 2s to 4s]</div>
+        <div class="prompt-content">
+          <strong>Hero pour</strong> — Olive oil drizzle in slow-motion (60fps) cascading over the salmon and sweet potato. Oil catches the warm backlight, golden and glossy. Steam continues to rise. Texture of the fish crust visible in extreme detail. The most appetizing moment of the entire clip.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[MAIN ACTION — 4s to 6s]</div>
+        <div class="prompt-content">
+          Camera orbits slowly around the plate (180° over 2 seconds), revealing the full dish from different angles. At 5.0s, cut to a tight macro of the salmon being pierced with a fork — the flake separates perfectly, showing the moist pink interior. Steam escapes from the cut.<br>
+          Text overlay at 5.0s: <em>"É o PersonalDiet."</em>
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[CAMERA]</div>
+        <div class="prompt-content">
+          90mm macro for the hook and money shot at f/2.8 (shallow depth). Slow lateral dolly for the orbit. Tight push-in on the fork-pierce moment. Phantom-style slow-mo on the oil pour only (not everywhere).
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[LIGHTING]</div>
+        <div class="prompt-content">
+          3000K warm window light from camera-right at 45°, soft. Single warm practical bounce from below the counter edge. Backlight from camera-back at 30% for steam visibility and oil gloss. Minimal shadows — pristine white plate stays white.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[COLOR & GRADE]</div>
+        <div class="prompt-content">
+          Warm, low-contrast, slight film grain. Salmon orange and broccoli green retain full saturation — they are the appetite cues. Cream and white stay neutral. Portra 400 look.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[CLOSING BEAT — 6s to 8s]</div>
+        <div class="prompt-content">
+          Plate settles. Text appears bottom-third: <em>"Cardápios clínicos com IA. R$ 19,90/mês."</em> Pink CTA button: <strong>"Começar agora"</strong>. Brand logo fades up. Hold 1.5s.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[IMPLIED AUDIO]</div>
+        <div class="prompt-content">
+          Soft sizzle throughout (low, background). Oil pour gurgle at 2.0s (subtle). Fork piercing fish crust — gentle crunch at 5.0s. Warm ambient kitchen tone. No music — pure food ASMR register.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[TECHNICAL]</div>
+        <div class="prompt-content">
+          resolution: 1080p; mode: std; genre: drama; aspect_ratio: 9:16; duration: 8;<br>
+          medias: [Hero Image B (food macro) as role=image]
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ===================== VÍDEO 3 ===================== -->
+<div class="section">
+  <span class="section-tag">Criativo C · BUDO Social Hook (Pattern Interrupt)</span>
+  <h2 class="font-heading">⚡ Vídeo 3: "Stop-Scroll Pattern Interrupt" (6s · 9:16)</h2>
+  <p class="section-desc">
+    Skills aplicadas: <code>budo-social-hook</code> (hook #20 Glitch Effect + #24 Stop-Scrolling Text).<br>
+    Format: UGC-style (user generated content). Menos polido, mais autêntico. Ideal para retargeting.
+  </p>
+
+  <div class="prompt-card">
+    <div class="prompt-header">
+      <h3>Prompt BUDO Completo — "Stop-Scroll Glitch"</h3>
+      <div class="prompt-badges">
+        <span class="badge badge-blue">Hook: #20 + #24</span>
+        <span class="badge badge-pink">Social Hook</span>
+        <span class="badge badge-dark">9:16 · 6s</span>
+      </div>
+    </div>
+    <div class="prompt-body">
+
+      <div class="prompt-section">
+        <div class="prompt-label">[GENRE / STYLE]</div>
+        <div class="prompt-content">
+          Genre: auto. Photoreal social register with <strong>authentic creator energy</strong>.<br>
+          QUALITY VOCAB: 4K, crisp detail (anti-compression), shot on iPhone 16 Pro for authentic register, handheld with light stabilization, neutral grade, <strong>social-optimized polish</strong>.<br>
+          Palette: bright daylight kitchen, clean white interior, single pink brand color accent.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[OPENING HOOK — 0 to 2s]</div>
+        <div class="prompt-content">
+          Hook: <strong>#20 Glitch Effect + #24 Stop-Scrolling Text Overlay</strong>.<br>
+          0.0–0.3s: Brazilian woman (35, casual, messy bun, holding phone) standing center-frame in a bright kitchen. Looks at camera, mouth open mid-word. Frame appears completely normal.<br>
+          0.3–0.5s: <strong>Sudden glitch</strong> — RGB color separation, pixel displacement, frame duplicates for 0.2s. Audio: digital corruption sound.<br>
+          0.5–1.0s: Reality "snaps back" — woman now looks directly at camera with clearer focus. Text fades up: <strong>"PARE de comer frango com salada."</strong><br>
+          1.0–1.5s: Hold the text. Woman makes a "wait" hand gesture, slight smile.<br>
+          1.5–2.0s: Text changes to: <em>"Sua IA de dieta existe."</em> Woman steps aside, revealing her phone screen with PersonalDiet meal plan and the "Importar receita" card.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[BODY PAYOFF — 2s to 5s]</div>
+        <div class="prompt-content">
+          At 2.0s camera pushes in past her to the phone screen. App interface visible: meal plan with appetizing food photos, ingredient lists, calorie counts. Quick swipe at 3.0s shows the pantry scanner detecting ingredients in a fridge. Quick tap at 3.6s shows a Reels/TikTok link pasted into "Importar receita". At 4.2s, the imported ingredients appear in the shopping list. Woman re-enters frame at 4.8s with a surprised-delighted expression.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[CAMERA]</div>
+        <div class="prompt-content">
+          35mm equivalent handheld. Slight micro-movement throughout (authentic energy). Push-in for the reveal at 2.0s. Quick whip-pan transition at 4.0s.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[LIGHTING]</div>
+        <div class="prompt-content">
+          Bright natural daylight from camera-front, soft. Single accent pink backlight from phone screen glow illuminating her face on close-ups.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[CLOSING BEAT — 5s to 6s]</div>
+        <div class="prompt-content">
+          Brand logo + text: <em>"PersonalDiet · R$ 19,90/mês"</em>. CTA: <strong>"Assinar agora"</strong>. Hold.
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[SOUND / TEXT]</div>
+        <div class="prompt-content">
+          Audio: glitch SFX at 0.3s. Sudden ambient kitchen sound at 0.5s. Trending audio drops at 2.0s (the reveal moment). Notification chime at 4.0s.<br>
+          Text: "PARE de comer frango com salada." (0.5–1.5s, bold); "Salvou receita? Importa pro app." (1.5–3.0s); "R$ 19,90/mês" (5.0–6.0s).
+        </div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">[TECHNICAL]</div>
+        <div class="prompt-content">
+          resolution: 1080p; mode: std; genre: auto; aspect_ratio: 9:16; duration: 6;<br>
+          medias: [Hero Image A as role=image]
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ===================== VÍDEO 4 ===================== -->
+<div class="section">
+  <span class="section-tag">Criativo E · UGC Life Hack (Importar Receita)</span>
+  <h2 class="font-heading">🔗 Vídeo 4: "Receita Salva no Reels" (7s · 9:16)</h2>
+  <p class="section-desc">
+    Novo ângulo para testar: a pessoa já salva receitas, mas nunca executa. O PersonalDiet vira a ponte entre inspiração e lista de compras.
+  </p>
+
+  <div class="prompt-card">
+    <div class="prompt-header">
+      <h3>Prompt BUDO Completo — "Saved Recipe Hack"</h3>
+      <div class="prompt-badges">
+        <span class="badge badge-blue">Hook: Problem-aware</span>
+        <span class="badge badge-pink">UGC Demo</span>
+        <span class="badge badge-dark">9:16 · 7s</span>
+      </div>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-section">
+        <div class="prompt-label">[OPENING HOOK — 0 to 1.5s]</div>
+        <div class="prompt-content">
+          Creator holds phone with a saved recipe/Reels folder open. Text overlay: <strong>"Você salva receitas e nunca faz?"</strong>
+        </div>
+      </div>
+      <div class="prompt-section">
+        <div class="prompt-label">[APP DEMO — 1.5s to 5s]</div>
+        <div class="prompt-content">
+          Screen recording style: paste recipe link into PersonalDiet → tap "Importar com IA" → preview appears with ingredients, steps, estimated macros → tap "Salvar no livro".
+        </div>
+      </div>
+      <div class="prompt-section">
+        <div class="prompt-label">[PAYOFF — 5s to 7s]</div>
+        <div class="prompt-content">
+          Shopping list fills automatically. Text overlay: <em>"Do vídeo salvo para o mercado."</em> CTA: <strong>"Teste 7 dias"</strong>.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ===================== QUIZ ===================== -->
+<div class="section">
+  <span class="section-tag">Criativo D · Quiz Interativo Stories</span>
+  <h2 class="font-heading">🧩 Quiz: "Sua dieta entende você?" (4 Stories · 15s total)</h2>
+  <p class="section-desc">
+    Não precisa de IA — usa stickers nativos do Instagram. Custo: zero. Engajamento: 3-5x maior que vídeo passivo.
+  </p>
+
+  <div class="quiz-frame">
+    <h4>Story 1 (3s) — Filtro de qualificação</h4>
+    <p style="font-size: 0.8rem; color: #92400e; margin-bottom: 0.75rem;">Pergunta na tela + sticker de enquete:</p>
+    <div style="font-size: 0.85rem; font-weight: 700; color: var(--stone-800); margin-bottom: 0.75rem;">"Você usa medicamento injetável?"</div>
+    <div class="quiz-option active"><div class="quiz-radio"></div>💉 Sim, Ozempic</div>
+    <div class="quiz-option"><div class="quiz-radio"></div>💊 Sim, Mounjaro</div>
+    <div class="quiz-option"><div class="quiz-radio"></div>❌ Não uso</div>
+  </div>
+
+  <div class="quiz-frame" style="background: linear-gradient(180deg, #fce7f3, #f3e8ff); border-color: #f9a8d4;">
+    <h4 style="color: var(--pink-600);">Story 2 (3s) — Restrições</h4>
+    <p style="font-size: 0.8rem; color: var(--pink-600); margin-bottom: 0.75rem;">Segunda enquete:</p>
+    <div style="font-size: 0.85rem; font-weight: 700; color: var(--stone-800); margin-bottom: 0.75rem;">"Tem alguma restrição alimentar?"</div>
+    <div class="quiz-option active"><div class="quiz-radio"></div>🌾 Celíaca (sem glúten)</div>
+    <div class="quiz-option"><div class="quiz-radio"></div>🥛 Intolerância à lactose</div>
+    <div class="quiz-option"><div class="quiz-radio"></div>🚫 Nenhuma</div>
+  </div>
+
+  <div class="quiz-frame" style="background: linear-gradient(180deg, #ecfdf5, #d1fae5); border-color: #6ee7b7;">
+    <h4 style="color: var(--emerald-600);">Story 3 (3s) — Resultado personalizado</h4>
+    <p style="font-size: 0.8rem; color: var(--emerald-600); margin-bottom: 0.75rem;">Texto grande na tela:</p>
+    <div style="font-size: 1rem; font-weight: 800; color: var(--stone-800); text-align: center; margin-bottom: 0.5rem;">
+      "Sua resposta: Ozempic + Sem glúten 🎯"<br>
+      <span style="font-size: 0.8rem; font-weight: 600; color: var(--stone-600);">PersonalDiet gera cardápios SOB MEDIDA pra você.</span>
+    </div>
+  </div>
+
+  <div class="quiz-frame">
+    <h4>Story 4 (6s) — CTA</h4>
+    <div style="font-size: 0.85rem; font-weight: 700; color: var(--stone-800); margin-bottom: 0.5rem;">
+      "Cardápio em 3 min. R$ 19,90/mês."<br>
+      <span style="font-size: 0.75rem; color: var(--stone-600); font-weight: 600;">Garantia de reembolso em 7 dias.</span>
+    </div>
+    <div style="display: inline-block; background: linear-gradient(135deg, var(--pink-500), var(--purple-500)); color: white; padding: 0.5rem 1rem; border-radius: 0.75rem; font-size: 0.8rem; font-weight: 800; font-family: 'Quicksand'; margin-top: 0.5rem;">👉 Assinar agora</div>
+    <p style="font-size: 0.7rem; color: var(--stone-400); margin-top: 0.75rem;">Sticker "Saiba mais" → link para landing page</p>
+  </div>
+</div>
+
+<hr>
+
+<!-- ===================== COPY ===================== -->
+<div class="section">
+  <span class="section-tag">Copy de Anúncios</span>
+  <h2 class="font-heading">📝 Copy pronta para Meta Ads</h2>
+
+  <div class="copy-card">
+    <div class="prompt-section">
+      <div class="prompt-label">[COPY A — Vídeo 1 · App Demo]</div>
+      <div class="prompt-content">
+        🤖 Chega de não saber o que comer.<br><br>
+        O PersonalDiet usa IA pra montar seu cardápio SEMANAL inteiro em 3 minutos — respeitando Ozempic, glúten, lactose, sua geladeira e até receitas salvas no Reels.<br><br>
+        ✅ Cardápios ilimitados<br>
+        ✅ Escaner de despensa<br>
+        ✅ Importador de receitas de vídeo<br>
+        ✅ Rastreio de sintomas<br><br>
+        <strong>R$ 19,90/mês · Garantia de 7 dias.</strong> Não curtiu? Devolvemos seu dinheiro.
+      </div>
+    </div>
+
+    <div class="prompt-section">
+      <div class="prompt-label">[COPY B — Vídeo 2 · Food]</div>
+      <div class="prompt-content">
+        🥗 Isto SIM é dieta.<br><br>
+        Salmão grelhado, batata-doce, brócolis — gerado pela IA do PersonalDiet em segundos. Também dá pra colar aquela receita salva no TikTok e transformar em lista de compras.<br><br>
+        <strong>R$ 19,90/mês.</strong> Primeira semana com garantia total.
+      </div>
+    </div>
+
+    <div class="prompt-section">
+      <div class="prompt-label">[COPY C — Vídeo 3 · Glitch/UGC]</div>
+      <div class="prompt-content">
+        ⚡ PARE de comer frango com salada todo dia.<br><br>
+        Sua IA de dieta existe. O PersonalDiet gera cardápios personalizados e importa receitas de vídeo pra Ozempic, Mounjaro, celíacos e intolerantes a lactose — sem complicação.<br><br>
+        <strong>R$ 19,90/mês · Cancele quando quiser.</strong>
+      </div>
+    </div>
+
+    <div class="prompt-section">
+      <div class="prompt-label">[COPY D — Retargeting]</div>
+      <div class="prompt-content">
+        Ainda pensando? 🤔<br><br>
+        Seu cardápio da semana está esperando. IA + seus ingredientes + suas receitas salvas + suas restrições = comida que sai do print e vai para o prato.<br><br>
+        <strong>R$ 19,90/mês · 7 dias de garantia.</strong> O que você tem a perder?
+      </div>
+    </div>
+
+    <div class="prompt-section">
+      <div class="prompt-label">[COPY E — Vídeo 4 · Importar Receita]</div>
+      <div class="prompt-content">
+        🔗 Você salva receita no Reels e nunca faz?<br><br>
+        Cola o link no PersonalDiet. A IA organiza ingredientes, preparo, macros estimados e ainda manda tudo para sua lista de compras.<br><br>
+        <strong>Teste 7 dias. R$ 19,90/mês depois.</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ===================== PALETA & SPECS ===================== -->
+<div class="section">
+  <span class="section-tag">Referência Visual</span>
+  <h2 class="font-heading">🎨 Paleta + Specs Técnicas</h2>
+
+  <div class="palette-row" style="margin-bottom: 1.5rem;">
+    <div class="color-chip" style="background: #f472b6;">Pink 400</div>
+    <div class="color-chip" style="background: #ec4899;">Pink 500</div>
+    <div class="color-chip" style="background: #db2777;">Pink 600</div>
+    <div class="color-chip" style="background: #c084fc;">Purple 400</div>
+    <div class="color-chip" style="background: #a855f7;">Purple 500</div>
+    <div class="color-chip" style="background: #10b981;">Emerald</div>
+    <div class="color-chip" style="background: #f59e0b;">Amber</div>
+    <div class="color-chip" style="background: #292524;">Stone 800</div>
+  </div>
+
+  <div class="note-box">
+    <h4>📐 Especificações para Meta Ads</h4>
+    <p>
+      <strong>Formato:</strong> MP4 · 1080×1920 (9:16) · 25fps<br>
+      <strong>Duração:</strong> 6–10s por clipe<br>
+      <strong>Legendas:</strong> Queimadas (obrigatório — 85% assistem sem som)<br>
+      <strong>Peso máx:</strong> 30MB<br>
+      <strong>Texto na imagem:</strong> Máx 20% da área (regra do Meta)<br>
+      <strong>CTA do Meta:</strong> "Saiba mais" → https://nutri-ai-5qaa.vercel.app/landing.html
+    </p>
+  </div>
+
+  <hr>
+
+  <span class="section-tag">Checklist Pré-Deploy</span>
+  <h2 class="font-heading">✅ Antes de ligar os anúncios</h2>
+
+  <div class="checklist">
+    <li>Pixel Meta (874508289045058) instalado na landing page</li>
+    <li>Landing page abre em < 3s no celular</li>
+    <li>Fluxo de cadastro → checkout funcionando (testar manualmente)</li>
+    <li>Webhook do Mercado Pago recebendo (testar com pagamento real de R$ 0,01)</li>
+    <li>Termos de uso e privacidade no footer (já existe)</li>
+    <li>Conta do Meta Business Manager verificada</li>
+    <li>Domínio verificado no Meta Business</li>
+    <li>4 criativos prontos (Vídeos 1, 2, 3 + Importar Receita)</li>
+    <li>Quiz criado no Instagram (4 Stories)</li>
+    <li>UTM: ?utm_source=meta&utm_medium=cpc&utm_campaign=[nome]</li>
+  </div>
+
+  <p style="font-size: 0.75rem; color: var(--stone-400); text-align: center; margin-top: 2rem;">
+    Pack criado com framework BUDO · PersonalDiet · Julho 2026
+  </p>
+</div>
+
+</body>
+</html>

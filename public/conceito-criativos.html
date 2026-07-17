@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PersonalDiet — Conceito de Criativos</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink-400: #f472b6; --pink-500: #ec4899; --pink-600: #db2777;
+    --purple-400: #c084fc; --purple-500: #a855f7;
+    --stone-50: #fafaf9; --stone-100: #f5f5f4; --stone-200: #e7e5e4;
+    --stone-400: #a8a29e; --stone-600: #57534e; --stone-800: #292524;
+    --emerald-500: #10b981; --emerald-600: #059669;
+    --amber-500: #f59e0b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Nunito', sans-serif; background: var(--stone-100); color: var(--stone-800); }
+  .font-heading { font-family: 'Quicksand', sans-serif; font-weight: 700; }
+
+  /* HERO */
+  .hero { background: linear-gradient(135deg, #fce7f3, #f3e8ff); padding: 3rem 2rem; text-align: center; }
+  .hero h1 { font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
+  .hero p { color: var(--stone-600); margin-top: 0.5rem; font-size: 0.9rem; }
+
+  /* SECTION */
+  .section { max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem; }
+  .section-tag { display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--pink-600); background: #fce7f3; padding: 0.25rem 0.75rem; border-radius: 999px; margin-bottom: 0.5rem; }
+  .section h2 { font-family: 'Quicksand'; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .section-desc { color: var(--stone-600); font-size: 0.85rem; margin-bottom: 2rem; line-height: 1.6; }
+
+  /* STORYBOARD FRAME */
+  .storyboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
+  .frame { background: white; border-radius: 1rem; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid var(--stone-200); }
+  .frame-mock { aspect-ratio: 9/16; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; position: relative; overflow: hidden; }
+  .frame-num { position: absolute; top: 0.5rem; left: 0.5rem; background: rgba(0,0,0,0.5); color: white; font-size: 0.65rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 999px; z-index: 10; }
+  .frame-label { padding: 0.75rem 1rem; font-size: 0.75rem; color: var(--stone-600); border-top: 1px solid var(--stone-200); }
+  .frame-label strong { color: var(--stone-800); display: block; font-size: 0.8rem; margin-bottom: 0.15rem; }
+
+  /* FRAME BACKGROUNDS */
+  .bg-pain { background: linear-gradient(180deg, #fef2f2, #fee2e2); }
+  .bg-magic { background: linear-gradient(180deg, #fce7f3, #f3e8ff); }
+  .bg-joy { background: linear-gradient(180deg, #ecfdf5, #d1fae5); }
+  .bg-dark { background: linear-gradient(180deg, #1c1917, #292524); }
+  .bg-quiz { background: linear-gradient(180deg, #fffbeb, #fef3c7); }
+
+  /* ANIMATED TEXT */
+  .anim-text { font-family: 'Quicksand'; font-weight: 800; text-align: center; line-height: 1.3; }
+  .anim-text-lg { font-size: 1.3rem; }
+  .anim-text-md { font-size: 1rem; }
+  .anim-text-sm { font-size: 0.8rem; }
+  .x-red { color: #ef4444; }
+  .check-green { color: var(--emerald-600); }
+  .pink { color: var(--pink-600); }
+  .white { color: white; }
+
+  /* PHONE MOCKUP */
+  .phone { width: 120px; height: 200px; background: var(--stone-800); border-radius: 1rem; padding: 0.3rem; box-shadow: 0 8px 30px rgba(0,0,0,0.15); }
+  .phone-screen { width: 100%; height: 100%; background: var(--stone-50); border-radius: 0.7rem; overflow: hidden; display: flex; flex-direction: column; }
+  .phone-header { background: linear-gradient(135deg, var(--pink-400), var(--purple-400)); padding: 0.5rem; display: flex; align-items: center; gap: 0.3rem; }
+  .phone-heart { width: 16px; height: 16px; background: white; border-radius: 50%; opacity: 0.9; }
+  .phone-body { flex: 1; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .phone-card { background: white; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.45rem; color: var(--stone-400); border: 1px solid var(--stone-200); }
+  .phone-card-pink { border-color: var(--pink-400); background: #fce7f3; }
+
+  /* CTA BUTTON */
+  .cta-mock { background: linear-gradient(135deg, var(--pink-500), var(--purple-500)); color: white; padding: 0.5rem 1rem; border-radius: 0.75rem; font-size: 0.75rem; font-weight: 800; font-family: 'Quicksand'; }
+
+  /* QUIZ */
+  .quiz-option { background: white; border: 2px solid var(--stone-200); border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.8rem; font-weight: 700; color: var(--stone-600); display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; }
+  .quiz-option.active { border-color: var(--pink-500); background: #fce7f3; color: var(--pink-600); }
+  .quiz-radio { width: 18px; height: 18px; border: 2px solid var(--stone-400); border-radius: 50%; flex-shrink: 0; }
+  .quiz-option.active .quiz-radio { border-color: var(--pink-500); background: var(--pink-500); }
+
+  /* BADGE */
+  .pill { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.65rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 999px; }
+  .pill-pink { background: #fce7f3; color: var(--pink-600); }
+  .pill-green { background: #d1fae5; color: var(--emerald-600); }
+  .pill-amber { background: #fef3c7; color: var(--amber-500); }
+
+  /* PALETTE */
+  .palette-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+  .color-chip { width: 60px; height: 60px; border-radius: 0.75rem; display: flex; align-items: flex-end; justify-content: center; padding: 0.3rem; font-size: 0.55rem; color: white; font-weight: 700; }
+
+  /* INFO BOX */
+  .info-box { background: white; border-radius: 1rem; padding: 1.5rem; border-left: 4px solid var(--pink-500); box-shadow: 0 2px 10px rgba(0,0,0,0.04); margin-top: 1.5rem; }
+  .info-box h4 { font-family: 'Quicksand'; font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .info-box p { font-size: 0.8rem; color: var(--stone-600); line-height: 1.6; }
+  .info-box ul { font-size: 0.8rem; color: var(--stone-600); line-height: 1.8; padding-left: 1.2rem; }
+
+  hr { border: none; border-top: 1px solid var(--stone-200); margin: 2rem 0; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <h1 class="font-heading">🎬 Conceito de Criativos — PersonalDiet</h1>
+  <p>Meta Ads · R$ 30/dia · Instagram Reels + Stories · 9:16 vertical</p>
+</div>
+
+<!-- ===================== VÍDEO ANIMADO ===================== -->
+<div class="section">
+  <span class="section-tag">Criativo A · Vídeo Animado</span>
+  <h2>📋 Storyboard: "A Jornada da Maria" (25s)</h2>
+  <p class="section-desc">
+    Estilo: animação 2D fluida (tipo Lottie/AE), cores da marca (rosa + roxo + branco).
+    Texto kinetic typography. Música: lo-fi suave, alegre.
+    Sem locução — tudo com texto animado + legendas queimadas.
+    <strong>Formato final:</strong> MP4 1080×1920, 25 segundos.
+  </p>
+
+  <div class="storyboard">
+
+    <!-- Frame 1 -->
+    <div class="frame">
+      <div class="frame-mock bg-pain">
+        <div class="frame-num">00:00 — 00:03</div>
+        <div class="anim-text anim-text-lg" style="color: var(--stone-800);">
+          Maria começou<br>o Ozempic 🥬
+        </div>
+        <div class="anim-text anim-text-sm" style="color: var(--stone-400); margin-top: 0.5rem;">
+          (animação: mulher olhando prato confusa)
+        </div>
+      </div>
+      <div class="frame-label">
+        <strong>Hook — Dor</strong>
+        Tela vermelha-pálida. Maria segurando bandagem. Expressão confusa. Texto entra com bounce.
+      </div>
+    </div>
+
+    <!-- Frame 2 -->
+    <div class="frame">
+      <div class="frame-mock bg-pain">
+        <div class="frame-num">00:03 — 00:08</div>
+        <div class="anim-text anim-text-md x-red">
+          ❌ Frango com salada<br>DE NOVO?<br>
+          ❌ Medo de passar mal<br>
+          ❌ Não sabe o que comer
+        </div>
+      </div>
+      <div class="frame-label">
+        <strong>Agora da dor — 3 dores</strong>
+        Cada "❌" entra com shake. Background escurece levemente. Som de "erro" sutil.
+      </div>
+    </div>
+
+    <!-- Frame 3 -->
+    <div class="frame">
+      <div class="frame-mock bg-magic">
+        <div class="frame-num">00:08 — 00:12</div>
+        <div class="anim-text anim-text-lg pink">
+          E se a IA montasse<br>seu cardápio?
+        </div>
+        <div style="margin-top: 1rem;">
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="phone-header">
+                <div class="phone-heart"></div>
+                <div style="font-size: 0.4rem; color: white; font-weight: 700;">PersonalDiet</div>
+              </div>
+              <div class="phone-body">
+                <div class="phone-card phone-card-pink">🍳 Café: Omelete...</div>
+                <div class="phone-card">🥗 Almoço: Salada...</div>
+                <div class="phone-card">🍎 Lanche: Iogurte...</div>
+                <div class="phone-card">🍽️ Jantar: Salmão...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-label">
+        <strong>Transição mágica — Solução</strong>
+        Tela clareia (rosa/roxo). Phone mockup aparece com cardápio gerado. Sparkle ✨ animation.
+      </div>
+    </div>
+
+    <!-- Frame 4 -->
+    <div class="frame">
+      <div class="frame-mock bg-joy">
+        <div class="frame-num">00:12 — 00:17</div>
+        <div class="anim-text anim-text-md check-green">
+          ✅ Cardápio em 3 min<br>
+          ✅ Importa receita do Reels<br>
+          ✅ Respeita Ozempic<br>
+          ✅ Sem glúten? Sem lactose?<br>
+          &nbsp;&nbsp;&nbsp;Sem problema 😊
+        </div>
+      </div>
+      <div class="frame-label">
+        <strong>Benefícios — 3 checks</strong>
+        Cada check entra com pop animation. Background verde-pálido (calma, alívio).
+      </div>
+    </div>
+
+    <!-- Frame 5 -->
+    <div class="frame">
+      <div class="frame-mock bg-dark">
+        <div class="frame-num">00:17 — 00:22</div>
+        <div class="anim-text anim-text-lg white">
+          Escaneie ou<br>importe receita 🔗
+        </div>
+        <div class="anim-text anim-text-sm" style="color: var(--stone-400); margin-top: 0.5rem;">
+          IA identifica ingredientes<br>ou transforma vídeos salvos<br>em lista de compras
+        </div>
+      </div>
+      <div class="frame-label">
+        <strong>Diferencial único — Pantry Scanner</strong>
+        Tela escura (modo "scanner"). Animação de câmera escaneando geladeira. Highlight do diferencial.
+      </div>
+    </div>
+
+    <!-- Frame 6 -->
+    <div class="frame">
+      <div class="frame-mock bg-magic">
+        <div class="frame-num">00:22 — 00:25</div>
+        <div class="anim-text anim-text-lg pink" style="margin-bottom: 0.75rem;">
+          PersonalDiet
+        </div>
+        <div class="anim-text anim-text-sm" style="color: var(--stone-600); margin-bottom: 0.75rem;">
+          R$ 19,90/mês · Garantia de 7 dias
+        </div>
+        <div class="cta-mock">👉 Começar agora</div>
+      </div>
+      <div class="frame-label">
+        <strong>CTA final</strong>
+        Logo + preço + garantia. Botão rosa pulsando. "Saiba mais" abaixo.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="info-box">
+    <h4>🎬 Especificações técnicas do vídeo</h4>
+    <ul>
+      <li><strong>Formato:</strong> MP4 · 1080×1920 (9:16 vertical) · 25fps · máx 30MB</li>
+      <li><strong>Duração:</strong> 25 segundos (ideal para Reels/Stories)</li>
+      <li><strong>Legendas:</strong> Queimadas no vídeo (85% das pessoas assistem sem som)</li>
+      <li><strong>Música:</strong> Lo-fi alegre, volume baixo (30%), sem voz</li>
+      <li><strong>Primeiros 3s:</strong> O hook é CRÍTICO — é o que decide se a pessoa rola ou para</li>
+      <li><strong>CTA do Meta:</strong> "Saiba mais" → leva para a landing page</li>
+    </ul>
+  </div>
+
+  <hr>
+
+  <!-- ===================== QUIZ ===================== -->
+  <span class="section-tag">Criativo B · Quiz Interativo</span>
+  <h2>🧩 Quiz: "Qual dieta combina com você?" (15s · Stories)</h2>
+  <p class="section-desc">
+    Formato: Story com sticker de enquete/poll do Instagram.
+    O usuário participa (engajamento altíssimo) e no último frame é direcionado para a landing page.
+    Custo: quase zero (é só texto + background colorido + sticker nativo).
+  </p>
+
+  <div class="storyboard">
+
+    <!-- Quiz Frame 1 -->
+    <div class="frame">
+      <div class="frame-mock bg-quiz">
+        <div class="frame-num">Frame 1 · 3s</div>
+        <div class="anim-text anim-text-lg pink" style="margin-bottom: 1rem;">
+          Quiz rápido! 🧩
+        </div>
+        <div class="anim-text anim-text-md" style="color: var(--stone-800);">
+          Você usa algum<br>medicamento injetável?
+        </div>
+        <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; width: 100%;">
+          <div class="quiz-option active">
+            <div class="quiz-radio"></div>
+            Sim, Ozempic 💉
+          </div>
+          <div class="quiz-option">
+            <div class="quiz-radio"></div>
+            Sim, Mounjaro 💊
+          </div>
+          <div class="quiz-option">
+            <div class="quiz-radio"></div>
+            Não uso
+          </div>
+        </div>
+      </div>
+      <div class="frame-label">
+        <strong>Pergunta 1 — Filtro de qualificação</strong>
+        Sticker de enquete nativo do Instagram. Quem responde "Sim" é o público-alvo.
+      </div>
+    </div>
+
+    <!-- Quiz Frame 2 -->
+    <div class="frame">
+      <div class="frame-mock bg-magic">
+        <div class="frame-num">Frame 2 · 3s</div>
+        <div class="anim-text anim-text-md" style="color: var(--stone-800); margin-bottom: 1rem;">
+          Tem alguma restrição<br>alimentar? 🤔
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%;">
+          <div class="quiz-option active">
+            <div class="quiz-radio"></div>
+            🌾 Celíaca (sem glúten)
+          </div>
+          <div class="quiz-option">
+            <div class="quiz-radio"></div>
+            🥛 Intolerância à lactose
+          </div>
+          <div class="quiz-option">
+            <div class="quiz-radio"></div>
+            Nenhuma
+          </div>
+        </div>
+      </div>
+      <div class="frame-label">
+        <strong>Pergunta 2 — Restrições</strong>
+        Segunda enquete. Reforça que o app entende restrições clínicas.
+      </div>
+    </div>
+
+    <!-- Quiz Frame 3 -->
+    <div class="frame">
+      <div class="frame-mock bg-joy">
+        <div class="frame-num">Frame 3 · 3s</div>
+        <div class="anim-text anim-text-md check-green" style="margin-bottom: 0.75rem;">
+          Sua resposta:<br>
+          <span class="anim-text-lg">Ozempic + Sem glúten 🎯</span>
+        </div>
+        <div class="anim-text anim-text-sm" style="color: var(--stone-600);">
+          PersonalDiet gera cardápios<br>
+          SOB MEDIDA para você.
+        </div>
+      </div>
+      <div class="frame-label">
+        <strong>Resultado personalizado</strong>
+        Mostra que o app "entendeu" o perfil. Sensação de personalização imediata.
+      </div>
+    </div>
+
+    <!-- Quiz Frame 4 -->
+    <div class="frame">
+      <div class="frame-mock bg-magic">
+        <div class="frame-num">Frame 4 · 6s · CTA</div>
+        <div class="anim-text anim-text-lg pink" style="margin-bottom: 0.5rem;">
+          Cardápio em 3 min.<br>
+          R$ 19,90/mês.
+        </div>
+        <div class="anim-text anim-text-sm" style="color: var(--stone-600); margin-bottom: 0.75rem;">
+          Garantia de reembolso em 7 dias.
+        </div>
+        <div class="cta-mock">👉 Começar agora</div>
+      </div>
+      <div class="frame-label">
+        <strong>CTA final do quiz</strong>
+        Botão "Saiba mais" nativo do Instagram → landing page.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="info-box">
+    <h4>💡 Por que o quiz funciona?</h4>
+    <ul>
+      <li><strong>Engajamento 3-5x maior</strong> que vídeo passivo (pessoa parapra responder)</li>
+      <li><strong>Custo de produção: ZERO</strong> — usa stickers nativos do Instagram</li>
+      <li><strong>Qualifica o lead</strong> — só clica em "Saiba mais" quem realmente tem o problema</li>
+      <li><strong>Algoritmo do Meta ama interação</strong> — Story com enquete tem prioridade no feed</li>
+      <li>Ideal para os <strong>R$ 30/dia</strong> — máximo de impacto com mínimo de orçamento</li>
+    </ul>
+  </div>
+
+  <hr>
+
+  <!-- ===================== PALETA ===================== -->
+  <span class="section-tag">Referência Visual</span>
+  <h2>🎨 Paleta de cores da marca</h2>
+  <p class="section-desc">Cores extraídas do app — todos os criativos devem seguir esta paleta para consistência.</p>
+
+  <div class="palette-row">
+    <div class="color-chip" style="background: #f472b6;">Pink 400</div>
+    <div class="color-chip" style="background: #ec4899;">Pink 500</div>
+    <div class="color-chip" style="background: #db2777;">Pink 600</div>
+    <div class="color-chip" style="background: #c084fc;">Purple 400</div>
+    <div class="color-chip" style="background: #a855f7;">Purple 500</div>
+    <div class="color-chip" style="background: #10b981;">Emerald</div>
+    <div class="color-chip" style="background: #ef4444;">Red (dores)</div>
+    <div class="color-chip" style="background: #292524;">Stone 800</div>
+  </div>
+
+  <div class="info-box">
+    <h4>📦 Próximos passos</h4>
+    <ul>
+      <li><strong>Vídeo animado:</strong> Posso gerar com IA (imagem por frame) ou criar em After Effects/Lottie</li>
+      <li><strong>Quiz:</strong> É só criar 4 Stories no Instagram com stickers nativos — sem software</li>
+      <li><strong>Carrossel (Criativo C):</strong> 4 slides estáticos com screenshots do app</li>
+      <li><strong>UGC Importar Receita:</strong> 1 vídeo extra mostrando link de Reels/TikTok virando receita + lista de compras</li>
+      <li><strong>Variações:</strong> Gerar 4 versões do vídeo (dor, comida, quiz e receita salva) para A/B test</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>

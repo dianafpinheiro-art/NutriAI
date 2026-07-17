@@ -4,7 +4,7 @@
 **Plataforma:** Meta Ads (Instagram + Facebook)  
 **Nicho:** Usuários de GLP-1 (Ozempic, Mounjaro), celíacos, intolerantes à lactose, low-carb  
 **Público:** Brasil (São Paulo, Rio, Curitiba, Belo Horizonte, Porto Alegre, Brasília)  
-**Objetivo:** Trial de 7 dias (conversão zero-friction)
+**Objetivo:** Conversão direta para checkout (garantia de reembolso em 7 dias)
 
 ---
 
@@ -21,10 +21,10 @@
 | Evento | Quando dispara | Prioridade |
 |--------|---------------|------------|
 | `PageView` | Landing page | 🔴 Obrigatório |
-| `Lead` | Clicou em "Começar 7 dias grátis" | 🔴 Obrigatório |
+| `Lead` | Clicou em "Assinar agora" | 🔴 Obrigatório |
 | `CompleteRegistration` | Criou conta no app | 🟡 Importante |
 | `InitiateCheckout` | Entrou na tela de planos | 🟡 Importante |
-| `Purchase` | Assinou Premium | 🟢 Ideal (mas raro no início) |
+| `Purchase` | Assinou Premium | 🔴 Obrigatório (evento principal) |
 
 ### URL da Landing Page (destino dos anúncios)
 ```
@@ -38,7 +38,7 @@ https://nutri-ai-5qaa.vercel.app/landing.html
 
 ---
 
-## 2. Criativos: 3 variações para testar A/B
+## 2. Criativos: 4 variações para testar A/B
 
 ### Criativo A — "Problema/Dor" (Vídeo 15-30s, Reels)
 **Texto no vídeo:**
@@ -49,8 +49,9 @@ https://nutri-ai-5qaa.vercel.app/landing.html
 ❌ Frango com salada de novo?
 
 ✅ PersonalDiet gera seu cardápio semanal
+✅ Importa receitas de TikTok/Reels
 ✅ Respeita suas restrições
-✅ 7 dias grátis → link na bio"
+✅ R$ 19,90/mês · Garantia de 7 dias → link na bio"
 ```
 **Tom:** Empatia, humor sofrido, "eu também passei por isso"
 **Formato:** Reels vertical (1080x1920), com legendas automáticas
@@ -61,7 +62,7 @@ https://nutri-ai-5qaa.vercel.app/landing.html
 **Slide 1:** "3 refeições que você pode comer usando Ozempic" + foto apetitosa
 **Slide 2:** "Cardápio da semana gerado em 3 minutos" + screenshot do app
 **Slide 3:** "Celíaca? Intolerante à lactose? Sem problema." + checkmarks
-**Slide 4:** "7 dias grátis. Sem cartão." + CTA botão rosa
+**Slide 4:** "R$ 19,90/mês · Garantia de 7 dias" + CTA botão rosa
 
 **Copy do post:**
 ```
@@ -71,8 +72,9 @@ PersonalDiet gera receitas personalizadas com IA, respeitando:
 ✅ Seu tratamento (Ozempic/Mounjaro)
 ✅ Suas restrições alimentares (glúten, lactose)
 ✅ Os ingredientes que você já tem na geladeira
+✅ As receitas que você salvou no TikTok, Reels ou YouTube
 
-🎁 7 dias grátis → link no perfil
+💎 R$ 19,90/mês · Não gostou? Devolução em 7 dias.
 
 #ozempic #mounjaro #cardápio #saúde #emagrecimento
 ```
@@ -93,9 +95,44 @@ com receitas que eu REALMENTE consigo comer.
 
 Agora tenho segurança na alimentação.
 
-Você também pode testar → 7 dias grátis."
+R$ 19,90 por mês. Se não curtir, devolve seu dinheiro em 7 dias."
 ```
 **Tom:** Testimonial real, íntimo, sem filtro
+
+---
+
+### Criativo D — "Receita Salva que Nunca Sai do Print" (UGC/Reels 7-12s)
+**Hook:**
+```
+"Você salva receita no TikTok e nunca faz?"
+```
+
+**Texto no vídeo:**
+```
+Cole o link no PersonalDiet.
+A IA extrai ingredientes, preparo e estimativa de macros.
+Você revisa, salva no livro de receitas
+e manda tudo para a lista de compras.
+
+R$ 19,90/mês · 7 dias de garantia.
+```
+
+**Copy do post:**
+```
+Sabe aquela receita que você salvou no Reels e ficou perdida?
+
+Agora você cola o link no PersonalDiet e a IA transforma em:
+✅ receita organizada
+✅ ingredientes com quantidades
+✅ estimativa de macros por porção
+✅ lista de compras automática
+
+E ainda respeita suas restrições: glúten, lactose, preferências e rotina alimentar.
+
+Teste 7 dias. R$ 19,90/mês depois.
+```
+
+**Tom:** UGC rápido, "life hack", demonstração de tela com link sendo colado.
 
 ---
 
@@ -147,7 +184,7 @@ Você também pode testar → 7 dias grátis."
 **Estrutura:**
 - 1 Campanha (CBO: R$ 30/dia)
 - 3 Ad Sets (públicos diferentes)
-- 3 Criativos por Ad Set (A/B test)
+- 4 Criativos por Ad Set (A/B test: dor, comida, UGC, importar receita)
 
 **Ad Set 1:** Interesse Ozempic/Mounjaro (São Paulo + Rio)
 **Ad Set 2:** Interesse low-carb/dieta (Curitiba + BH + Porto Alegre)
@@ -218,6 +255,7 @@ Você também pode testar → 7 dias grátis."
 - [ ] Landing page abrindo rápido (< 3s) no celular
 - [ ] Teste de conversão: você consegue fazer login e ativar o trial?
 - [ ] App não quebra quando gera cardápio (teste o fluxo completo)
+- [ ] Importação de receita testada com texto manual e com fallback de link bloqueado
 - [ ] Conta do Mercado Pago com saldo para receber pagamentos
 - [ ] Termos de uso e política de privacidade no footer (já tem)
 - [ ] Conta no Meta Business Manager verificada
@@ -258,7 +296,7 @@ Você também pode testar → 7 dias grátis."
 1. **Nunca gaste mais de R$ 50/dia nos primeiros 14 dias** — primeiro você aprende, depois escala
 2. **Nunca pare um anúncio antes de 48h** — o Meta precisa de tempo para otimizar
 3. **Nunca escale mais que 20% do orçamento por dia** — senão o algoritmo quebra
-4. **Sempre tenha 3 criativos rodando** — nunca dependa de um só
+4. **Sempre tenha 4 criativos rodando** — nunca dependa de um só; o novo ângulo de "receita salva no Reels" deve disputar com os criativos atuais
 5. **Retargeting é metade do jogo** — quem já viu tem 3x mais chance de converter
 6. **Não se apaixone pelo criativo** — se os números dizem que é ruim, pare
 
@@ -293,7 +331,7 @@ Use uma planilha do Google Sheets ou Excel. Atualize uma vez por dia, de manhã.
 
 ## Resumo em 3 frases:
 
-> Comece com **R$ 30/dia**, teste **3 criativos** e **3 públicos**, e acompanhe **todo dia**. O objetivo não é lucrar na semana 1 — é **descobrir o que funciona**. Só escale depois de achar um criativo + público que entregue leads por menos de **R$ 10**.
+> Comece com **R$ 30/dia**, teste **4 criativos** e **3 públicos**, e acompanhe **todo dia**. O objetivo não é lucrar na semana 1 — é **descobrir o que funciona**. Só escale depois de achar um criativo + público que entregue leads por menos de **R$ 10**.
 
 ---
 

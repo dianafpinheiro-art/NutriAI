@@ -197,7 +197,7 @@ export default function SymptomTracker({ userId }: SymptomTrackerProps) {
 
         {showSuccess && (
           <div className="p-2.5 bg-green-50 border border-green-100 text-green-700 rounded-xl text-xs text-center font-medium animate-fade">
-            ✓ Sintoma registrado e vinculado ao prontuário clínico!
+            ✓ Sintoma registrado no seu diário de saúde!
           </div>
         )}
       </div>

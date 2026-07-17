@@ -1,7 +1,7 @@
 {
-  "name": "PersonalDiet - Cardápios Clínicos",
+  "name": "PersonalDiet — Cardápios Inteligentes",
   "short_name": "PersonalDiet",
-  "description": "Elaboração de cardápio semanal personalizado, listas de compras precisas e monitoramento clínico.",
+  "description": "Escaneie sua geladeira e receba cardápios com IA usando o que você já tem. Economize dinheiro, evite desperdício e respeite suas restrições alimentares.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fafaf9",

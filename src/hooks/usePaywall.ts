@@ -20,12 +20,8 @@ export function usePaywall(userId: string): PaywallState {
     plan: null,
   });
 
-  useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-
-    getSubscriptionStatus(userId).then((data) => {
-      if (cancelled) return;
+  const refresh = (uid: string) => {
+    getSubscriptionStatus(uid).then((data) => {
       const isActive = data.status === "active" || data.status === "trial";
       const isTrial = data.status === "trial";
       setState({
@@ -37,8 +33,34 @@ export function usePaywall(userId: string): PaywallState {
         plan: data.plan ?? null,
       });
     });
+  };
 
-    return () => { cancelled = true; };
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+
+    // Initial fetch
+    refresh(userId);
+
+    // Re-check status when the tab becomes visible again (user returning from MP checkout)
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && !cancelled) {
+        refresh(userId);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // Also re-check on window focus (covers some mobile browsers)
+    const handleFocus = () => {
+      if (!cancelled) refresh(userId);
+    };
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [userId]);
 
   return state;

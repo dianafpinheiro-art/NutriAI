@@ -1,9 +1,10 @@
 {
   "version": 2,
   "rewrites": [
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/privacy", "destination": "/privacidade.html" },
+    { "source": "/terms", "destination": "/termos.html" },
+    { "source": "/politica-de-privacidade", "destination": "/privacidade.html" },
+    { "source": "/termos-de-uso", "destination": "/termos.html" },
+    { "source": "/((?!api/)(?!privacy$)(?!terms$)(?!politica-de-privacidade$)(?!termos-de-uso$).*)", "destination": "/index.html" }
   ]
 }
