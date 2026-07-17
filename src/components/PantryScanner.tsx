@@ -180,10 +180,33 @@ export default function PantryScanner({ onSuggestRecipes, onUpdatePreferences, c
     setVisionDetectedItems([]);
 
     try {
+      // Converte a primeira foto selecionada em base64 real para a IA.
+      // (Antes era enviado um placeholder fixo, o que fazia a analise falhar sempre.)
+      const firstPhoto = [...fridgePhotos, ...pantryPhotos].find((p) => p !== null) as string;
+      const base64 = await new Promise<string>((resolve, reject) => {
+        if (firstPhoto.startsWith("data:")) {
+          resolve(firstPhoto.split(",")[1] || "");
+          return;
+        }
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx2d = canvas.getContext("2d");
+          if (!ctx2d) { reject(new Error("canvas indisponivel")); return; }
+          ctx2d.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/jpeg", 0.85).split(",")[1] || "");
+        };
+        img.onerror = () => reject(new Error("falha ao carregar foto"));
+        img.src = firstPhoto;
+      });
+
       const response = await authFetch("/api/gemini/analyze-pantry-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: "carousel-multi-base64-data", totalPhotos }),
+        body: JSON.stringify({ image: base64, totalPhotos }),
       });
       const data = await response.json();
       

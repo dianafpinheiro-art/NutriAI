@@ -278,7 +278,17 @@ export async function structureImportedRecipe(
     },
   });
 
-  return parseCleanJson(response.text || "{}") as ImportedRecipe | { erro: string };
+  const parsed = parseCleanJson(response.text || "{}") as ImportedRecipe & { erro?: string };
+  // O responseSchema inclui a propriedade "erro", entao o Gemini costuma
+  // devolver erro:"" mesmo em receitas validas — e `"erro" in receita`
+  // considerava isso uma falha. So e erro de verdade se vier preenchido.
+  if (parsed.erro !== undefined) {
+    logger("warn", "import-recipe: campo erro presente na resposta", { erro: String(parsed.erro).slice(0, 200), keys: Object.keys(parsed).join(",") });
+  }
+  if (parsed.erro !== undefined && !parsed.erro) {
+    delete parsed.erro;
+  }
+  return parsed as ImportedRecipe | { erro: string };
 }
 
 export async function importRecipeFromSource(params: {
