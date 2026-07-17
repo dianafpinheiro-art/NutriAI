@@ -1,15 +1,18 @@
 import { Router, Request, Response } from "express";
+import { createHmac } from "crypto";
 import { z } from "zod";
-import { validateBody } from "../middlewares/validate.ts";
-import { logger } from "../services/logger.ts";
-import { supabaseAdmin } from "../utils/supabaseAdmin.ts";
+import { validateBody } from "../middlewares/validate.js";
+import { logger } from "../services/logger.js";
+import { supabaseAdmin } from "../utils/supabaseAdmin.js";
+import { sendWelcomeEmail } from "../services/emailService.js";
+import { sendPurchaseEvent } from "../services/metaCapi.js";
 import {
   createPaymentPreference,
   handleWebhook,
   type MpWebhookBody,
   type WebhookResult,
-} from "../services/paymentService.ts";
-import { CreateSubscriptionSchema } from "../utils/schemas.ts";
+} from "../services/paymentService.js";
+import { CreateSubscriptionSchema } from "../utils/schemas.js";
 
 export async function postCreateSubscription(req: Request, res: Response): Promise<void> {
   try {
@@ -75,6 +78,18 @@ async function activateSubscription(result: WebhookResult): Promise<void> {
 
   const { userId, plan, paymentId } = result;
 
+  // IDEMPOTENCY: check if this payment was already processed
+  const { data: existingPayment } = await supabaseAdmin
+    .from("payments")
+    .select("id, status")
+    .eq("mercado_pago_payment_id", paymentId)
+    .maybeSingle();
+
+  if (existingPayment?.status === "approved") {
+    logger("info", "Payment already processed, skipping", { paymentId });
+    return;
+  }
+
   const expiresAt =
     plan === "monthly"
       ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -112,16 +127,91 @@ async function activateSubscription(result: WebhookResult): Promise<void> {
   if (paymentError) {
     logger("error", "Erro ao inserir pagamento no historico", { error: paymentError.message });
   }
+
+  // Disparar email de boas-vindas com o acesso
+  let userEmail: string | undefined;
+  if (supabaseAdmin) {
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    userEmail = userData?.user?.email ?? undefined;
+  }
+
+  if (userEmail) {
+    sendWelcomeEmail({
+      email: userEmail,
+      plan,
+      expiresAt: expiresAt.toISOString(),
+    }).catch((err) => {
+      logger("error", "Falha ao disparar email de boas-vindas (non-blocking)", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }
+
+  // Meta Conversions API — evento Purchase server-side (non-blocking)
+  sendPurchaseEvent({
+    email: userEmail,
+    userId,
+    paymentId,
+    value: plan === "monthly" ? 19.9 : 149.9,
+    currency: "BRL",
+    plan: plan === "monthly" ? "Mensal" : "Anual",
+  }).catch((err) => {
+    logger("error", "Falha ao enviar Purchase a Meta CAPI (non-blocking)", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+}
+
+/**
+ * Verify Mercado Pago webhook signature (HMAC SHA256).
+ * https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/ipn#bookmark_verificación_de_seguridad
+ */
+function verifyMpSignature(req: Request): boolean {
+  const mpSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+  if (!mpSecret) {
+    // If no secret configured, skip verification (with warning) — but in production it should be set
+    logger("warn", "MERCADO_PAGO_WEBHOOK_SECRET not configured — signature verification skipped");
+    return true;
+  }
+
+  const signature = req.headers["x-signature"] as string | undefined;
+  const requestId = req.headers["x-request-id"] as string | undefined;
+  if (!signature) return false;
+
+  // MP format: "ts=...,v1=..." — we parse and reconstruct
+  const parts = signature.split(",");
+  const tsPart = parts.find((p) => p.trim().startsWith("ts="));
+  const v1Part = parts.find((p) => p.trim().startsWith("v1="));
+  if (!tsPart || !v1Part) return false;
+
+  const ts = tsPart.split("=")[1]?.trim();
+  const v1 = v1Part.split("=")[1]?.trim();
+  if (!ts || !v1) return false;
+
+  const body = req.body as MpWebhookBody;
+  // Manifest oficial MP: id:[data.id_url];request-id:[x-request-id];ts:[ts];
+  // data.id vem dos query params da URL; ids alfanumericos em lowercase;
+  // segmentos ausentes sao removidos do manifest.
+  const queryDataId = String((req.query?.["data.id"] as string | undefined) ?? "");
+  const dataId = (queryDataId || String(body?.data?.id || "")).toLowerCase();
+
+  let manifest = "";
+  if (dataId) manifest += `id:${dataId};`;
+  if (requestId) manifest += `request-id:${requestId};`;
+  manifest += `ts:${ts};`;
+
+  const expected = createHmac("sha256", mpSecret).update(manifest).digest("hex");
+
+  return expected === v1;
 }
 
 export async function postWebhook(req: Request, res: Response): Promise<void> {
   try {
-    // Optional: validate Mercado Pago signature for security
-    const mpSignature = req.headers["x-signature"] as string | undefined;
-    const mpSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
-    if (mpSecret && mpSignature) {
-      // Basic validation — in production you should verify the HMAC signature
-      logger("info", "Webhook received with signature", { hasSignature: !!mpSignature });
+    // Verify Mercado Pago signature for security
+    if (!verifyMpSignature(req)) {
+      logger("warn", "Webhook signature verification failed");
+      res.status(401).json({ error: "Invalid signature" });
+      return;
     }
 
     const body = req.body as MpWebhookBody;

@@ -1,8 +1,10 @@
 // Usar a API REST do Mercado Pago (sem SDK, para nao adicionar dependencia)
 // https://www.mercadopago.com.br/developers/pt/reference
 
-const MP_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || "";
-const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
+import { cleanEnv } from "../utils/helpers.js";
+
+const MP_ACCESS_TOKEN = cleanEnv(process.env.MERCADO_PAGO_ACCESS_TOKEN);
+const APP_BASE_URL = cleanEnv(process.env.APP_BASE_URL) || "http://localhost:3000";
 
 export interface CreateSubscriptionRequest {
   userId: string;

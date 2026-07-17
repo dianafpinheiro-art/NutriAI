@@ -4,11 +4,11 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import cors from "cors";
 
-import { logger } from "./src/server/services/logger.ts";
-import { requireSupabaseSession } from "./src/server/middlewares/auth.ts";
-import { rateLimitGemini } from "./src/server/middlewares/rateLimit.ts";
-import { geminiRouter } from "./src/server/controllers/geminiController.ts";
-import { paymentRouter, postWebhook } from "./src/server/controllers/paymentController.ts";
+import { logger } from "./src/server/services/logger.js";
+import { requireSupabaseSession } from "./src/server/middlewares/auth.js";
+import { rateLimitGemini } from "./src/server/middlewares/rateLimit.js";
+import { geminiRouter } from "./src/server/controllers/geminiController.js";
+import { paymentRouter, postWebhook } from "./src/server/controllers/paymentController.js";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -19,6 +19,20 @@ process.env.NODE_ENV = process.env.NODE_ENV || (isBundledServer ? "production" :
 const app = express();
 const PORT = 3000;
 
+// Sanitiza valores de env: remove BOM, quebras de linha (\r\n de copy-paste
+// no painel do Vercel/Windows) e aspas envolventes. Um caractere invalido
+// aqui derruba TODAS as respostas com "Invalid character in header content"
+// quando o helmet monta o header Content-Security-Policy.
+function cleanEnv(value: string | undefined): string {
+  let v = (value || "").replace(/^\uFEFF/, "").replace(/[\r\n]/g, "").trim();
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+    v = v.slice(1, -1).trim();
+  }
+  return v;
+}
+
+const supabaseOrigin = cleanEnv(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL);
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -27,7 +41,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
       fontSrc: ["'self'", "fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https://images.unsplash.com"],
-      connectSrc: ["'self'", process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "*"].filter(Boolean),
+      connectSrc: ["'self'", supabaseOrigin || "*"].filter(Boolean),
     },
   },
   hsts: {
@@ -37,7 +51,16 @@ app.use(helmet({
   },
 }));
 
-app.use(cors({ origin: process.env.ALLOWED_ORIGIN || "*", credentials: true }));
+// In production, lock CORS to the APP_URL / APP_BASE_URL domain.
+// In development, allow localhost on any port.
+const corsOrigin = process.env.NODE_ENV === "production"
+  ? cleanEnv(process.env.APP_URL || process.env.APP_BASE_URL).replace(/\/$/, "")
+  : "*";
+
+app.use(cors({
+  origin: corsOrigin || false, // false = reject cross-origin requests
+  credentials: true,
+}));
 app.use(express.json({ limit: "15mb" }));
 app.disable("x-powered-by");
 
@@ -61,10 +84,14 @@ app.use("/api/gemini", requireSupabaseSession, rateLimitGemini, geminiRouter);
 app.post("/api/payments/webhook", postWebhook);
 app.use("/api/payments", requireSupabaseSession, paymentRouter);
 
-// Error handler — loga e retorna o erro para debug
+// Error handler — loga internamente, retorna mensagem genérica em produção
 app.use((err: any, _req: Request, res: Response, _next: any) => {
   console.error("[SERVER ERROR]", err);
-  res.status(500).json({ error: err?.message || "Internal server error", stack: err?.stack });
+  const isDev = process.env.NODE_ENV !== "production";
+  res.status(500).json({
+    error: isDev ? (err?.message || "Internal server error") : "Internal server error",
+    ...(isDev ? { stack: err?.stack } : {}),
+  });
 });
 
 async function startServer(): Promise<void> {

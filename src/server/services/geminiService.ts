@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { GoogleGenAI, Type } from "@google/genai";
-import { logger } from "./logger.ts";
-import { sanitizeString, parseCleanJson } from "../utils/helpers.ts";
+import { logger } from "./logger.js";
+import { sanitizeString, parseCleanJson, cleanEnv } from "../utils/helpers.js";
 
 interface CacheEntry {
   data: unknown;
@@ -30,7 +30,7 @@ let aiClient: GoogleGenAI | null = null;
 
 export function getGeminiClient(): GoogleGenAI {
   if (!aiClient) {
-    const key = process.env.GEMINI_API_KEY || "";
+    const key = cleanEnv(process.env.GEMINI_API_KEY);
     aiClient = new GoogleGenAI({
       apiKey: key,
       httpOptions: {
@@ -71,14 +71,17 @@ function setCache(prompt: string, data: unknown): void {
   geminiCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
-async function cachedGeminiCall(prompt: string, generateFn: () => Promise<unknown>): Promise<unknown> {
-  const cached = getFromCache(prompt);
+async function cachedGeminiCall(prompt: string, generateFn: () => Promise<unknown>, contentHash?: string): Promise<unknown> {
+  // Include content hash in cache key so different images/PDFs with the same prompt text
+  // don't return each other's results (critical for analyzePantryImage and parsePrescription).
+  const cacheKey = contentHash ? `${prompt}::${contentHash}` : prompt;
+  const cached = getFromCache(cacheKey);
   if (cached) {
     logger("info", "Cache hit for Gemini prompt");
     return cached;
   }
   const result = await generateFn();
-  setCache(prompt, result);
+  setCache(cacheKey, result);
   return result;
 }
 
@@ -229,7 +232,7 @@ export async function generateMenu(
   actionType: string,
   localeInstruction?: string
 ): Promise<unknown> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = cleanEnv(process.env.GEMINI_API_KEY);
   const useMock = process.env.USE_MOCK_AI === "true";
 
   logger("info", "generate-menu requested", { apiKeyPresent: !!apiKey, useMock });
@@ -268,7 +271,7 @@ export async function generateMenu(
 }
 
 export async function parsePrescription(fileContent: string): Promise<unknown> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = cleanEnv(process.env.GEMINI_API_KEY);
   const useMock = process.env.USE_MOCK_AI === "true";
 
   logger("info", "parse-prescription requested", { apiKeyPresent: !!apiKey, useMock });
@@ -325,11 +328,11 @@ export async function parsePrescription(fileContent: string): Promise<unknown> {
     });
 
     return parseCleanJson(response.text?.trim() || "{}");
-  });
+  }, createHash("sha256").update(fileContent).digest("hex").slice(0, 32));
 }
 
 export async function analyzePantryImage(image: string): Promise<unknown> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = cleanEnv(process.env.GEMINI_API_KEY);
   const useMock = process.env.USE_MOCK_AI === "true";
 
   logger("info", "analyze-pantry-image requested", { apiKeyPresent: !!apiKey, useMock });
@@ -384,7 +387,7 @@ export async function analyzePantryImage(image: string): Promise<unknown> {
     });
 
     return parseCleanJson(response.text?.trim() || "{}");
-  });
+  }, createHash("sha256").update(image).digest("hex").slice(0, 32));
 }
 
 function analyzeLabelsFallback(sanitizedLabel: string, restrictionType: "celiac" | "lactose"): unknown {
@@ -413,7 +416,7 @@ function analyzeLabelsFallback(sanitizedLabel: string, restrictionType: "celiac"
 }
 
 export async function analyzeLabels(labelText: string, restrictionType: "celiac" | "lactose"): Promise<unknown> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = cleanEnv(process.env.GEMINI_API_KEY);
   const useMock = process.env.USE_MOCK_AI === "true";
 
   logger("info", "analyze-labels requested", { apiKeyPresent: !!apiKey, useMock });

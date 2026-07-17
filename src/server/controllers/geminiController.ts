@@ -1,20 +1,22 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
-import { validateBody } from "../middlewares/validate.ts";
+import { validateBody } from "../middlewares/validate.js";
 import {
   GenerateMenuSchema,
   ParsePrescriptionSchema,
   AnalyzePantryImageSchema,
   AnalyzeLabelsSchema,
-} from "../utils/schemas.ts";
-import { validateBase64Size } from "../utils/helpers.ts";
-import { logger } from "../services/logger.ts";
+  ImportRecipeSchema,
+} from "../utils/schemas.js";
+import { validateBase64Size } from "../utils/helpers.js";
+import { logger } from "../services/logger.js";
 import {
   generateMenu,
   parsePrescription,
   analyzePantryImage,
   analyzeLabels,
-} from "../services/geminiService.ts";
+} from "../services/geminiService.js";
+import { importRecipeFromSource } from "../services/recipeImportService.js";
 
 const router = Router();
 
@@ -71,6 +73,22 @@ router.post("/analyze-labels", validateBody(AnalyzeLabelsSchema), async (req: Re
     const errMsg = err instanceof Error ? err.message : String(err);
     logger("error", "Error in analyze-labels controller", { error: errMsg });
     res.status(500).json({ error: "Falha na analise inteligente de compostos do rotulo." });
+  }
+});
+
+router.post("/import-recipe", validateBody(ImportRecipeSchema), async (req: Request, res: Response) => {
+  try {
+    const body = (req as unknown as { validatedBody: z.infer<typeof ImportRecipeSchema> }).validatedBody;
+    const result = await importRecipeFromSource(body);
+    if (typeof result === "object" && result && "erro" in result) {
+      res.status(422).json(result);
+      return;
+    }
+    res.json(result);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    logger("error", "Error in import-recipe controller", { error: errMsg });
+    res.status(500).json({ error: errMsg || "Falha ao importar receita." });
   }
 });
 

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { supabaseAuth } from "../utils/supabase.ts";
+import { supabaseAuth } from "../utils/supabase.js";
 
 export async function requireSupabaseSession(req: Request, res: Response, next: NextFunction): Promise<void> {
   if (!supabaseAuth) {

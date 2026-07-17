@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
+import { createHmac } from "crypto";
+import { sendPurchaseEvent } from "../../src/server/services/metaCapi.js";
 
 function cleanEnv(value: string | undefined): string {
   const trimmed = (value || "").replace(/^\uFEFF/, "").trim();
@@ -55,6 +57,18 @@ async function activateSubscription(params: {
     throw new Error("Supabase admin env vars missing on Vercel.");
   }
 
+  // IDEMPOTENCY: skip if this payment was already processed
+  const { data: existingPayment } = await supabaseAdmin
+    .from("payments")
+    .select("id, status")
+    .eq("mercado_pago_payment_id", params.paymentId)
+    .maybeSingle();
+
+  if (existingPayment?.status === "approved") {
+    console.log("[payments/webhook] Payment already processed, skipping:", params.paymentId);
+    return;
+  }
+
   const expiresAt =
     params.plan === "monthly"
       ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -75,12 +89,14 @@ async function activateSubscription(params: {
     throw profileError;
   }
 
+  const amount = params.plan === "monthly" ? 19.9 : 149.9;
+
   const { error: paymentError } = await supabaseAdmin.from("payments").upsert(
     {
       user_id: params.userId,
       mercado_pago_payment_id: params.paymentId,
       mercado_pago_preference_id: null,
-      amount: params.plan === "monthly" ? 19.9 : 149.9,
+      amount,
       currency: "BRL",
       status: "approved",
       plan: params.plan,
@@ -92,6 +108,27 @@ async function activateSubscription(params: {
   if (paymentError) {
     throw paymentError;
   }
+
+  // Meta Conversions API — evento Purchase server-side (non-blocking).
+  // No-op se META_PIXEL_ID / META_CAPI_ACCESS_TOKEN nao estiverem configuradas.
+  let buyerEmail: string | undefined;
+  try {
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(params.userId);
+    buyerEmail = userData?.user?.email ?? undefined;
+  } catch {
+    // segue sem email — external_id (user_id) ainda permite match
+  }
+
+  sendPurchaseEvent({
+    email: buyerEmail,
+    userId: params.userId,
+    paymentId: params.paymentId,
+    value: amount,
+    currency: "BRL",
+    plan: params.plan === "monthly" ? "Mensal" : "Anual",
+  }).catch((err) => {
+    console.error("[payments/webhook] Meta CAPI falhou (non-blocking):", err?.message || err);
+  });
 }
 
 export default async function handler(req: any, res: any) {
@@ -102,9 +139,53 @@ export default async function handler(req: any, res: any) {
 
   try {
     const body = await readBody(req);
-    const paymentId = body?.data?.id || body?.id;
 
-    if (!paymentId || (body?.type && body.type !== "payment")) {
+    // Mercado Pago tambem envia data.id e type como QUERY PARAMS (?data.id=...&type=payment)
+    const searchParams = new URL(req.url || "/", "http://localhost").searchParams;
+    const queryDataId = String(req.query?.["data.id"] ?? searchParams.get("data.id") ?? "");
+    const queryType = String(req.query?.type ?? searchParams.get("type") ?? "");
+
+    // Verify Mercado Pago signature
+    // Manifest oficial: id:[data.id_url];request-id:[x-request-id];ts:[ts];
+    // - data.id vem dos query params da URL (nao do body)
+    // - ids alfanumericos devem estar em lowercase
+    // - segmentos ausentes sao removidos do manifest
+    // Docs: https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks
+    const mpSecret = cleanEnv(process.env.MERCADO_PAGO_WEBHOOK_SECRET);
+    if (mpSecret) {
+      const signature = req.headers["x-signature"] || "";
+      const requestId = String(req.headers["x-request-id"] || "");
+      if (!signature || typeof signature !== "string") {
+        return res.status(401).json({ error: "Missing signature" });
+      }
+      const parts = signature.split(",");
+      const tsPart = parts.find((p) => p.trim().startsWith("ts="));
+      const v1Part = parts.find((p) => p.trim().startsWith("v1="));
+      if (!tsPart || !v1Part) {
+        return res.status(401).json({ error: "Invalid signature format" });
+      }
+      const ts = tsPart.split("=")[1]?.trim();
+      const v1 = v1Part.split("=")[1]?.trim();
+      const dataIdForManifest = (queryDataId || String(body?.data?.id || body?.id || "")).toLowerCase();
+
+      let manifest = "";
+      if (dataIdForManifest) manifest += `id:${dataIdForManifest};`;
+      if (requestId) manifest += `request-id:${requestId};`;
+      manifest += `ts:${ts};`;
+
+      const expected = createHmac("sha256", mpSecret).update(manifest).digest("hex");
+      if (expected !== v1) {
+        console.error("[payments/webhook] Signature mismatch");
+        return res.status(401).json({ error: "Invalid signature" });
+      }
+    } else {
+      console.warn("[payments/webhook] MERCADO_PAGO_WEBHOOK_SECRET not set — skipping verification");
+    }
+
+    const paymentId = body?.data?.id || body?.id || queryDataId;
+    const notificationType = body?.type || queryType;
+
+    if (!paymentId || (notificationType && notificationType !== "payment")) {
       return res.status(200).json({ received: true, note: "not a payment notification" });
     }
 

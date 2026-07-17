@@ -25,3 +25,16 @@ export function parseCleanJson(text: string): unknown {
   }
   return JSON.parse(cleanText.trim());
 }
+
+/**
+ * Sanitiza valores de variaveis de ambiente: remove BOM, quebras de linha
+ * (\r\n de copy-paste no painel do Vercel/Windows) e aspas envolventes.
+ * Valores "sujos" corrompem headers HTTP, URLs do Supabase e chaves de API.
+ */
+export function cleanEnv(value: string | undefined): string {
+  let v = (value || "").replace(/^\uFEFF/, "").replace(/[\r\n]/g, "").trim();
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+    v = v.slice(1, -1).trim();
+  }
+  return v;
+}
